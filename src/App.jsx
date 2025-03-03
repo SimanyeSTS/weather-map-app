@@ -48,13 +48,23 @@ function App() {
   const [position, setPosition] = useState(null);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('darkMode') === 'true';
-  });
+  const [darkMode, setDarkMode] = useState(false); // Default is light mode
   const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]); // Default to Cape Town
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
+
+  // Load darkMode from localStorage on component mount
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+
+    if (savedDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, []);
 
   const getSwalStyling = useCallback(() => ({
     background: darkMode ? '#333' : '#f5f5f5',
@@ -66,7 +76,7 @@ function App() {
   const handleLocationSelect = useCallback(async (latlng) => {
     setPosition(latlng);
     setMapCenter([latlng.lat, latlng.lng]);
-    
+
     localStorage.setItem('selectedLocation', JSON.stringify(latlng));
 
     showSpinner();
@@ -79,10 +89,17 @@ function App() {
 
       localStorage.setItem('weatherData', JSON.stringify(response.data));
     } catch (error) {
+      let errorMessage = "An error occurred while fetching weather data.";
+      if (error.response && error.response.status === 404) {
+        errorMessage = "Location not found. Please ensure the coordinates are correct.";
+      } else if (error.message.includes("Network Error")) {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: `Failed to fetch weather data: ${error.message}`,
+        text: errorMessage,
         ...getSwalStyling(),
       });
     } finally {
@@ -91,17 +108,19 @@ function App() {
   }, [getSwalStyling]);
 
   useEffect(() => {
-    const storedLocation = localStorage.getItem('selectedLocation');
     const storedWeather = localStorage.getItem('weatherData');
-
-    if (storedLocation) {
-      const parsedLocation = JSON.parse(storedLocation);
-      setPosition(parsedLocation);
-      setMapCenter([parsedLocation.lat, parsedLocation.lng]);
-    }
+    const storedLocation = localStorage.getItem('selectedLocation');
 
     if (storedWeather) {
       setWeather(JSON.parse(storedWeather));
+    }
+
+    // Use stored location data or geolocation
+    if (storedLocation) {
+      const location = JSON.parse(storedLocation);
+      setMapCenter([location.lat, location.lng]);
+      setPosition(location);
+      handleLocationSelect(location); // Set weather data for stored location
     } else if (navigator.geolocation) {
       showSpinner();
       navigator.geolocation.getCurrentPosition(
@@ -110,18 +129,30 @@ function App() {
           const userLocation = { lat: latitude, lng: longitude };
           setMapCenter([latitude, longitude]);
           setPosition(userLocation);
-          handleLocationSelect(userLocation);
+          handleLocationSelect(userLocation); // Call to set weather data for this location
         },
         (error) => {
           hideSpinner();
           Swal.fire({
             icon: 'error',
             title: 'Location Error',
-            text: `Unable to get your current location: ${error.message}. Please search for a city manually.`,
+            text: `Unable to get your current location: ${error.message}. Defaulting to Cape Town.`,
             ...getSwalStyling(),
           });
+
+          // If geolocation fails, default to Cape Town
+          const defaultLocation = { lat: -33.9249, lng: 18.4241 }; // Cape Town coordinates
+          setMapCenter([defaultLocation.lat, defaultLocation.lng]);
+          setPosition(defaultLocation);
+          handleLocationSelect(defaultLocation); // Call to set weather data for Cape Town
         }
       );
+    } else {
+      // If geolocation is not supported, default to Cape Town
+      const defaultLocation = { lat: -33.9249, lng: 18.4241 };
+      setMapCenter([defaultLocation.lat, defaultLocation.lng]);
+      setPosition(defaultLocation);
+      handleLocationSelect(defaultLocation); // Call to set weather data for Cape Town
     }
   }, [handleLocationSelect, getSwalStyling]);
 
@@ -164,10 +195,15 @@ function App() {
         });
       }
     } catch (error) {
+      let errorMessage = "Error searching for location.";
+      if (error.message.includes("Network Error")) {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: `Error searching for location: ${error.message}. Please try again.`,
+        text: `${errorMessage} Please try again.`,
         ...getSwalStyling(),
       });
     } finally {
@@ -176,9 +212,10 @@ function App() {
   };
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.body.classList.toggle('dark-mode');
-    localStorage.setItem('darkMode', !darkMode);
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    document.body.classList.toggle('dark-mode', newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode);
   };
 
   return (
