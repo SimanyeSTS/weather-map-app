@@ -198,11 +198,15 @@ function App() {
     cancelButtonColor: darkMode ? '#dc3545' : '#ffc107',
   }), [darkMode]);
 
-  const handleLocationSelect = useCallback(async (latlng) => {
+  const handleLocationSelect = useCallback(async (latlng, preserveZoom = true) => {
     setPosition(latlng);
+    
+    // If preserveZoom is true, keep the current zoom level
+    // Otherwise, use the default zoom level
+    const newZoom = preserveZoom ? zoomLevel : 13;
     setMapCenter([latlng.lat, latlng.lng]);
-    setPreviousLocation(latlng);
 
+    setPreviousLocation(latlng);
     localStorage.setItem('selectedLocation', JSON.stringify(latlng));
 
     showSpinner();
@@ -230,7 +234,7 @@ function App() {
     } finally {
       hideSpinner();
     }
-  }, [getSwalStyling]);
+  }, [getSwalStyling, zoomLevel]);
 
   useEffect(() => {
     const storedWeather = localStorage.getItem('weatherData');
@@ -298,7 +302,7 @@ function App() {
       if (geoResponse.data && geoResponse.data.length > 0) {
         const { lat, lon } = geoResponse.data[0];
         const searchedLocation = { lat, lng: lon };
-        handleLocationSelect(searchedLocation);
+        handleLocationSelect(searchedLocation, true); // Preserve zoom
       } else {
         Swal.fire({
           icon: 'warning',
@@ -364,15 +368,14 @@ function App() {
             <LocateButton 
               onLocate={(location) => {
                 setModeToggled(false);
-                setMapCenter([location.lat, location.lng]); // Update mapCenter
-                handleLocationSelect(location);
+                handleLocationSelect(location, true); // Preserve zoom
               }} 
               darkMode={darkMode} 
             />
           </div>
           <MapEvents onMapClick={(latlng) => {
             setModeToggled(false);
-            handleLocationSelect(latlng);
+            handleLocationSelect(latlng, true); // Preserve zoom
           }} />
           {position && <Marker position={position} icon={darkMode ? darkIcon : lightIcon}><Popup>{weather?.name || 'Selected location'}</Popup></Marker>}
         </MapContainer>
