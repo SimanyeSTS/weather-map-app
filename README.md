@@ -27,7 +27,7 @@ This project is a React application that displays weather data for different loc
 - **Vite**: Build tool and development server
 - **React Leaflet**: Map integration
 - **Axios**: API calls
-- **Sass**: Styling
+- **CSS**: Styling
 - **React Router Dom**: For potential future routing
 
 ## Project Setup
@@ -41,7 +41,7 @@ This project is a React application that displays weather data for different loc
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/weather-map.git
+git clone https://github.com/SimanyeSTS/weather-map-app.git
 cd weather-map
 ```
 
