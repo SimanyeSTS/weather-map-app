@@ -4,7 +4,8 @@
   padding: 0;
 }
 
-body {
+body, html {
+  height: 100%;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   transition: background-color 0.3s, color 0.3s;
 }
@@ -12,10 +13,8 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
-  overflow: hidden;
-  position: relative;
 }
 
 .controls {
@@ -31,11 +30,10 @@ body {
 }
 
 .content {
-  display: flex;
   flex: 1;
+  display: flex;
   overflow: hidden;
   position: relative;
-  padding-bottom: 50px; 
 }
 
 .map-container {
@@ -356,10 +354,10 @@ body {
 }
 
 .footer-container {
-  position: absolute;
+  width: 100%;
+  position: sticky;
   bottom: 0;
   left: 0;
-  width: 100%;
   z-index: 1000;
   background-color: var(--background-color);
   padding: 15px 0;
