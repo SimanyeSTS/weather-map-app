@@ -109,7 +109,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
 
   return (
     <div 
-      className="leaflet-bar leaflet-control locate-button" 
+      className="locate-button"
       style={{
         position: 'absolute', 
         bottom: '20px', 
@@ -242,6 +242,7 @@ function App() {
           (pos) => {
             const { latitude, longitude } = pos.coords;
             const userLocation = { lat: latitude, lng: longitude };
+            setMapCenter([latitude, longitude]); // Update mapCenter
             handleLocationSelect(userLocation);
           },
           (error) => {
@@ -255,18 +256,20 @@ function App() {
 
             // If geolocation fails, default to Cape Town
             const defaultLocation = { lat: -33.9249, lng: 18.4241 };
+            setMapCenter([defaultLocation.lat, defaultLocation.lng]); // Update mapCenter
             handleLocationSelect(defaultLocation);
           }
         );
       } else {
         // If geolocation is not supported, default to Cape Town
         const defaultLocation = { lat: -33.9249, lng: 18.4241 };
+        setMapCenter([defaultLocation.lat, defaultLocation.lng]); // Update mapCenter
         handleLocationSelect(defaultLocation);
       }
     } 
     else if (modeToggled && previousLocation) {
       setPosition(previousLocation);
-      setMapCenter([previousLocation.lat, previousLocation.lng]);
+      setMapCenter([previousLocation.lat, previousLocation.lng]); // Update mapCenter
       if (storedWeather) {
         setWeather(JSON.parse(storedWeather));
       }
@@ -341,6 +344,7 @@ function App() {
 
       <div className="content">
         <MapContainer 
+          key={`${mapCenter[0]}-${mapCenter[1]}`} // Force re-render when mapCenter changes
           center={mapCenter} 
           zoom={zoomLevel} 
           className="map-container"
@@ -356,13 +360,16 @@ function App() {
             attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
           />
           <CustomAttribution />
-          <LocateButton 
-            onLocate={(location) => {
-              setModeToggled(false);
-              handleLocationSelect(location);
-            }} 
-            darkMode={darkMode} 
-          />
+          <div className="locate-button-container">
+            <LocateButton 
+              onLocate={(location) => {
+                setModeToggled(false);
+                setMapCenter([location.lat, location.lng]); // Update mapCenter
+                handleLocationSelect(location);
+              }} 
+              darkMode={darkMode} 
+            />
+          </div>
           <MapEvents onMapClick={(latlng) => {
             setModeToggled(false);
             handleLocationSelect(latlng);
