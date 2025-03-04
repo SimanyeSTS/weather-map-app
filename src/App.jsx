@@ -52,8 +52,8 @@ const LocateButton = ({ onLocate, darkMode }) => {
           const { latitude, longitude } = pos.coords;
           const userLocation = { lat: latitude, lng: longitude };
 
-          map.setView([latitude, longitude], 13, { animate: true });
-          onLocate(userLocation);
+          map.setView([latitude, longitude], map.getZoom(), { animate: true }); // Use current zoom level
+          onLocate(userLocation); // Trigger onLocate callback
         },
         (error) => {
           Swal.fire({
@@ -64,8 +64,8 @@ const LocateButton = ({ onLocate, darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            map.setView([defaultLocation.lat, defaultLocation.lng], 13, { animate: true });
-            onLocate(defaultLocation);
+            map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom(), { animate: true }); // Use current zoom level
+            onLocate(defaultLocation); // Trigger onLocate callback
           });
         },
         {
@@ -83,8 +83,8 @@ const LocateButton = ({ onLocate, darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        map.setView([defaultLocation.lat, defaultLocation.lng], 13, { animate: true });
-        onLocate(defaultLocation);
+        map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom(), { animate: true }); // Use current zoom level
+        onLocate(defaultLocation); // Trigger onLocate callback
       });
     }
   };
