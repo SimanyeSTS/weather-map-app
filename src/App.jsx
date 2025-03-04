@@ -28,14 +28,6 @@ const darkIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const MapUpdater = ({ center }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, 13, { animate: true });
-  }, [center, map]);
-  return null;
-};
-
 const MapEvents = ({ onMapClick }) => {
   useMapEvents({
     click: (e) => {
@@ -49,11 +41,9 @@ const LocateButton = ({ onLocate, darkMode }) => {
   const map = useMap();
 
   const handleLocate = (e) => {
-    // Strictly prevent event propagation and default behavior
     e.stopPropagation();
     e.preventDefault();
 
-    // Default Cape Town location
     const defaultLocation = { lat: -33.9249, lng: 18.4241 };
 
     if (navigator.geolocation) {
@@ -62,7 +52,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
           const { latitude, longitude } = pos.coords;
           const userLocation = { lat: latitude, lng: longitude };
 
-          map.setView([latitude, longitude], 13);
+          map.setView([latitude, longitude], 13, { animate: true });
           onLocate(userLocation);
         },
         (error) => {
@@ -74,13 +64,13 @@ const LocateButton = ({ onLocate, darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            map.setView([defaultLocation.lat, defaultLocation.lng], 13);
+            map.setView([defaultLocation.lat, defaultLocation.lng], 13, { animate: true });
             onLocate(defaultLocation);
           });
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 10000,
           maximumAge: 0
         }
       );
@@ -93,7 +83,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        map.setView([defaultLocation.lat, defaultLocation.lng], 13);
+        map.setView([defaultLocation.lat, defaultLocation.lng], 13, { animate: true });
         onLocate(defaultLocation);
       });
     }
@@ -138,21 +128,25 @@ const LocateButton = ({ onLocate, darkMode }) => {
         border: `2px solid ${darkMode ? '#FF5D5D' : '#007BFF'}`,
         transition: 'transform 0.1s ease'
       }}
-      onClick={handleLocate} // Ensure onClick is still attached
+      onClick={handleLocate}
       onMouseDown={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onMouseUp={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
       }}
       onTouchStart={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onTouchEnd={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
@@ -169,9 +163,17 @@ function App() {
   const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]); // Default to Cape Town
   const [modeToggled, setModeToggled] = useState(false);
   const [previousLocation, setPreviousLocation] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(13); // Default zoom level
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
+
+  useEffect(() => {
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDarkMode(prefersDarkMode);
+    document.body.classList.toggle('dark-mode', prefersDarkMode);
+    localStorage.setItem('darkMode', prefersDarkMode.toString());
+  }, []);
 
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -338,8 +340,15 @@ function App() {
       </div>
 
       <div className="content">
-        <MapContainer center={mapCenter} zoom={13} className="map-container"> 
-          <MapUpdater center={mapCenter} />
+        <MapContainer 
+          center={mapCenter} 
+          zoom={zoomLevel} 
+          className="map-container"
+          whenCreated={(map) => {
+            // Update zoom level when the user zooms
+            map.on('zoomend', () => setZoomLevel(map.getZoom()));
+          }}
+        >
           <TileLayer
             url={darkMode 
               ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
