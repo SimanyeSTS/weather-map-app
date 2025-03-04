@@ -35,6 +35,7 @@ body, html {
   flex: 1;
   overflow: hidden;
   position: relative;
+  padding-bottom: 70px;
 }
 
 .map-container {
@@ -281,7 +282,6 @@ body, html {
   .search-bar {
     margin-bottom: 10px;
   }
-
 
   .dark-mode-toggle {
     margin-left: 0;
