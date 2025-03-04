@@ -60,7 +60,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
         (pos) => {
           const { latitude, longitude } = pos.coords;
           const userLocation = { lat: latitude, lng: longitude };
-          
+
           map.setView([latitude, longitude], 13);
           onLocate(userLocation);
         },
@@ -116,7 +116,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
     </svg>
   );
 
-    return (
+  return (
     <div 
       className="leaflet-bar leaflet-control locate-button" 
       style={{
