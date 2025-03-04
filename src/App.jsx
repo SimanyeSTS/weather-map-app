@@ -45,6 +45,55 @@ const MapEvents = ({ onMapClick }) => {
   return null;
 };
 
+const LocateButton = ({ onLocate, darkMode }) => {
+  const map = useMap();
+
+  const handleLocate = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const userLocation = { lat: latitude, lng: longitude };
+          map.setView([latitude, longitude], 13);
+          onLocate(userLocation);
+        },
+        (error) => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Location Error',
+            text: `Unable to get your current location: ${error.message}. Defaulting to Cape Town.`,
+          });
+        }
+      );
+    }
+  };
+
+  return (
+    <div 
+      className="leaflet-bar leaflet-control locate-button" 
+      style={{
+        position: 'absolute', 
+        bottom: '20px', 
+        left: '20px', 
+        zIndex: 1000,
+        backgroundColor: darkMode ? 'red' : 'blue',
+        color: 'white',
+        borderRadius: '50%',
+        width: '40px',
+        height: '40px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        cursor: 'pointer',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+      }}
+      onClick={handleLocate}
+    >
+      ⊕
+    </div>
+  );
+};
+
 function App() {
   const [position, setPosition] = useState(null);
   const [weather, setWeather] = useState(null);
@@ -66,7 +115,7 @@ function App() {
     } else {
       document.body.classList.remove('dark-mode');
     }
-    
+
     const storedLocation = localStorage.getItem('selectedLocation');
     if (storedLocation) {
       setPreviousLocation(JSON.parse(storedLocation));
@@ -116,8 +165,7 @@ function App() {
 
   useEffect(() => {
     const storedWeather = localStorage.getItem('weatherData');
-    
-    // Only use geolocation on initial app load when no previous location exists
+
     if (!previousLocation) {
       if (navigator.geolocation) {
         showSpinner();
@@ -209,7 +257,7 @@ function App() {
     setDarkMode(newDarkMode);
     document.body.classList.toggle('dark-mode', newDarkMode);
     localStorage.setItem('darkMode', newDarkMode.toString());
-    
+
     setModeToggled(true);
   };
 
@@ -232,6 +280,13 @@ function App() {
             attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
           />
           <CustomAttribution />
+          <LocateButton 
+            onLocate={(location) => {
+              setModeToggled(false);
+              handleLocationSelect(location);
+            }} 
+            darkMode={darkMode} 
+          />
           <MapEvents onMapClick={(latlng) => {
             setModeToggled(false);
             handleLocationSelect(latlng);
