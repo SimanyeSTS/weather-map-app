@@ -48,7 +48,10 @@ const MapEvents = ({ onMapClick }) => {
 const LocateButton = ({ onLocate, darkMode }) => {
   const map = useMap();
 
-  const handleLocate = () => {
+   const handleLocate = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -86,31 +89,38 @@ const LocateButton = ({ onLocate, darkMode }) => {
     </svg>
   );
 
-  return (
+    return (
     <div 
       className="leaflet-bar leaflet-control locate-button" 
       style={{
         position: 'absolute', 
         bottom: '20px', 
         left: '20px', 
-        zIndex: 1000,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)', // Translucent white background
+        zIndex: 2000,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)', 
         color: darkMode ? '#FF5D5D' : '#007BFF',
         borderRadius: '50%',
-        width: '50px',  // Larger touch target
-        height: '50px', // Larger touch target
+        width: '50px',  
+        height: '50px', 
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         cursor: 'pointer',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.2)', // Softer shadow
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)', 
         border: `2px solid ${darkMode ? '#FF5D5D' : '#007BFF'}`,
-        transition: 'transform 0.1s ease' // Added subtle press effect
+        transition: 'transform 0.1s ease'
       }}
       onClick={handleLocate}
-      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(0.95)';
+      }}
+      onMouseUp={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(1)';
+      }}
     >
       {locationIcon}
     </div>
