@@ -1,3 +1,160 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, useMap, useMapEvents, Marker, Popup } from 'react-leaflet';
+import axios from 'axios';
+import 'leaflet/dist/leaflet.css';
+import './App.css';
+import L from 'leaflet';
+import Swal from 'sweetalert2';
+import SearchBar from './components/SearchBar';
+import WeatherSidebar from './components/WeatherSidebar';
+import Footer from './components/Footer';
+import CustomAttribution from './components/CustomAttribution';
+
+const lightIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const darkIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const MapEvents = ({ onMapClick }) => {
+  useMapEvents({
+    click: (e) => {
+      onMapClick(e.latlng);
+    },
+  });
+  return null;
+};
+
+const LocateButton = ({ onLocate, darkMode }) => {
+  const map = useMap();
+
+  const handleLocate = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const defaultLocation = { lat: -33.9249, lng: 18.4241 };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const userLocation = { lat: latitude, lng: longitude };
+
+          map.setView([latitude, longitude], map.getZoom(), { animate: true }); // Use current zoom level
+          onLocate(userLocation); // Trigger onLocate callback
+        },
+        (error) => {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Location Not Found',
+            text: `Unable to retrieve your current location. ${error.message}. Defaulting to Cape Town.`,
+            confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
+            background: darkMode ? '#333' : '#f5f5f5',
+            color: darkMode ? '#f5f5f5' : '#333',
+          }).then(() => {
+            map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom(), { animate: true }); // Use current zoom level
+            onLocate(defaultLocation); // Trigger onLocate callback
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Geolocation Not Supported',
+        text: 'Your browser does not support geolocation. Defaulting to Cape Town.',
+        confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
+        background: darkMode ? '#333' : '#f5f5f5',
+        color: darkMode ? '#f5f5f5' : '#333',
+      }).then(() => {
+        map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom(), { animate: true }); // Use current zoom level
+        onLocate(defaultLocation); // Trigger onLocate callback
+      });
+    }
+  };
+
+  const locationIcon = (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke={darkMode ? '#FF5D5D' : '#007BFF'} 
+      strokeWidth="3" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+    </svg>
+  );
+
+  return (
+    <div 
+      className="locate-button"
+      style={{
+        position: 'absolute', 
+        bottom: '20px', 
+        left: '20px', 
+        zIndex: 2000,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+        color: darkMode ? '#FF5D5D' : '#007BFF',
+        borderRadius: '50%',
+        width: '50px',  
+        height: '50px', 
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        cursor: 'pointer',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)', 
+        border: `2px solid ${darkMode ? '#FF5D5D' : '#007BFF'}`,
+        transition: 'transform 0.1s ease'
+      }}
+      onClick={handleLocate}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(0.95)';
+      }}
+      onMouseUp={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(1)';
+      }}
+      onTouchStart={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(0.95)';
+      }}
+      onTouchEnd={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(1)';
+      }}
+    >
+      {locationIcon}
+    </div>
+  );
+};
+
 function App() {
   const [position, setPosition] = useState(null);
   const [weather, setWeather] = useState(null);
