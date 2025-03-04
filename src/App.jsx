@@ -48,26 +48,53 @@ const MapEvents = ({ onMapClick }) => {
 const LocateButton = ({ onLocate, darkMode }) => {
   const map = useMap();
 
-   const handleLocate = (e) => {
+  const handleLocate = (e) => {
     e.stopPropagation();
     e.preventDefault();
+
+    // Default Cape Town location
+    const defaultLocation = { lat: -33.9249, lng: 18.4241 };
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
           const userLocation = { lat: latitude, lng: longitude };
+          
           map.setView([latitude, longitude], 13);
           onLocate(userLocation);
         },
         (error) => {
           Swal.fire({
-            icon: 'error',
-            title: 'Location Error',
-            text: `Unable to get your current location: ${error.message}. Defaulting to Cape Town.`,
+            icon: 'warning',
+            title: 'Location Not Found',
+            text: `Unable to retrieve your current location. ${error.message}. Defaulting to Cape Town.`,
+            confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
+            background: darkMode ? '#333' : '#f5f5f5',
+            color: darkMode ? '#f5f5f5' : '#333',
+          }).then(() => {
+            map.setView([defaultLocation.lat, defaultLocation.lng], 13);
+            onLocate(defaultLocation);
           });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         }
       );
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Geolocation Not Supported',
+        text: 'Your browser does not support geolocation. Defaulting to Cape Town.',
+        confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
+        background: darkMode ? '#333' : '#f5f5f5',
+        color: darkMode ? '#f5f5f5' : '#333',
+      }).then(() => {
+        map.setView([defaultLocation.lat, defaultLocation.lng], 13);
+        onLocate(defaultLocation);
+      });
     }
   };
 
