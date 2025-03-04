@@ -37,7 +37,7 @@ const MapEvents = ({ onMapClick }) => {
   return null;
 };
 
-const LocateButton = ({ onLocate, darkMode }) => {
+const LocateButton = ({ darkMode }) => {
   const map = useMap();
 
   const handleLocate = (e) => {
@@ -50,10 +50,8 @@ const LocateButton = ({ onLocate, darkMode }) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          const userLocation = { lat: latitude, lng: longitude };
-
-          map.setView([latitude, longitude], map.getZoom(), { animate: true }); // Use current zoom level
-          onLocate(userLocation); // Trigger onLocate callback
+          // Directly set the view using the current zoom level
+          map.setView([latitude, longitude], map.getZoom());
         },
         (error) => {
           Swal.fire({
@@ -64,8 +62,8 @@ const LocateButton = ({ onLocate, darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom(), { animate: true }); // Use current zoom level
-            onLocate(defaultLocation); // Trigger onLocate callback
+            // Directly set the view to default location using current zoom level
+            map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom());
           });
         },
         {
@@ -83,8 +81,8 @@ const LocateButton = ({ onLocate, darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom(), { animate: true }); // Use current zoom level
-        onLocate(defaultLocation); // Trigger onLocate callback
+        // Directly set the view to default location using current zoom level
+        map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom());
       });
     }
   };
@@ -198,13 +196,13 @@ function App() {
     cancelButtonColor: darkMode ? '#dc3545' : '#ffc107',
   }), [darkMode]);
 
-  const handleLocationSelect = useCallback(async (latlng, preserveZoom = true) => {
+  const handleLocationSelect = useCallback(async (latlng, preserveZoom = false) => {
     setPosition(latlng);
-    
-    // If preserveZoom is true, keep the current zoom level
-    // Otherwise, use the default zoom level
+
+    // If preserveZoom is false, reset to default zoom
     const newZoom = preserveZoom ? zoomLevel : 13;
     setMapCenter([latlng.lat, latlng.lng]);
+    setZoomLevel(newZoom);
 
     setPreviousLocation(latlng);
     localStorage.setItem('selectedLocation', JSON.stringify(latlng));
@@ -348,7 +346,7 @@ function App() {
 
       <div className="content">
         <MapContainer 
-          key={`${mapCenter[0]}-${mapCenter[1]}`} // Force re-render when mapCenter changes
+          key={`${mapCenter[0]}-${mapCenter[1]}`}
           center={mapCenter} 
           zoom={zoomLevel} 
           className="map-container"
@@ -366,10 +364,6 @@ function App() {
           <CustomAttribution />
           <div className="locate-button-container">
             <LocateButton 
-              onLocate={(location) => {
-                setModeToggled(false);
-                handleLocationSelect(location, true); // Preserve zoom
-              }} 
               darkMode={darkMode} 
             />
           </div>
