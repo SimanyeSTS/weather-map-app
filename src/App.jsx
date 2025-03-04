@@ -79,7 +79,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 8000,
           maximumAge: 0
         }
       );
@@ -144,6 +144,16 @@ const LocateButton = ({ onLocate, darkMode }) => {
         e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onMouseUp={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(1)';
+      }}
+      onTouchStart={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        e.currentTarget.style.transform = 'scale(0.95)';
+      }}
+      onTouchEnd={(e) => {
         e.stopPropagation();
         e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
