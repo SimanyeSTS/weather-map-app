@@ -378,3 +378,30 @@ body {
   margin: 0 5px;
   transition: color 0.3s;
 }
+
+.leaflet-control-attribution {
+  font-size: 10px;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.dark-mode .leaflet-control-attribution {
+  background-color: rgba(34, 34, 34, 0.7);
+  color: #ddd;
+}
+
+.leaflet-control-attribution a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.dark-mode .leaflet-control-attribution a {
+  color: #6ecfde; 
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.leaflet-control-attribution a:hover {
+  text-decoration: underline;
+}

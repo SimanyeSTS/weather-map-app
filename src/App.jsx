@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import SearchBar from './components/SearchBar';
 import WeatherSidebar from './components/WeatherSidebar';
 import Footer from './components/Footer';
+import CustomAttribution from './components/CustomAttribution';
 
 const lightIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -48,13 +49,14 @@ function App() {
   const [position, setPosition] = useState(null);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(false); // Default is light mode
+  const [darkMode, setDarkMode] = useState(false);
   const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]); // Default to Cape Town
+  const [modeToggled, setModeToggled] = useState(false);
+  const [previousLocation, setPreviousLocation] = useState(null);
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
 
-  // Load darkMode from localStorage on component mount
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedDarkMode);
@@ -63,6 +65,11 @@ function App() {
       document.body.classList.add('dark-mode');
     } else {
       document.body.classList.remove('dark-mode');
+    }
+    
+    const storedLocation = localStorage.getItem('selectedLocation');
+    if (storedLocation) {
+      setPreviousLocation(JSON.parse(storedLocation));
     }
   }, []);
 
@@ -76,6 +83,7 @@ function App() {
   const handleLocationSelect = useCallback(async (latlng) => {
     setPosition(latlng);
     setMapCenter([latlng.lat, latlng.lng]);
+    setPreviousLocation(latlng);
 
     localStorage.setItem('selectedLocation', JSON.stringify(latlng));
 
@@ -86,7 +94,6 @@ function App() {
         `https://api.openweathermap.org/data/2.5/weather?lat=${latlng.lat}&lon=${latlng.lng}&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}&units=metric`
       );
       setWeather(response.data);
-
       localStorage.setItem('weatherData', JSON.stringify(response.data));
     } catch (error) {
       let errorMessage = "An error occurred while fetching weather data.";
@@ -109,52 +116,45 @@ function App() {
 
   useEffect(() => {
     const storedWeather = localStorage.getItem('weatherData');
-    const storedLocation = localStorage.getItem('selectedLocation');
+    
+    // Only use geolocation on initial app load when no previous location exists
+    if (!previousLocation) {
+      if (navigator.geolocation) {
+        showSpinner();
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            const userLocation = { lat: latitude, lng: longitude };
+            handleLocationSelect(userLocation);
+          },
+          (error) => {
+            hideSpinner();
+            Swal.fire({
+              icon: 'error',
+              title: 'Location Error',
+              text: `Unable to get your current location: ${error.message}. Defaulting to Cape Town.`,
+              ...getSwalStyling(),
+            });
 
-    if (storedWeather) {
-      setWeather(JSON.parse(storedWeather));
+            // If geolocation fails, default to Cape Town
+            const defaultLocation = { lat: -33.9249, lng: 18.4241 };
+            handleLocationSelect(defaultLocation);
+          }
+        );
+      } else {
+        // If geolocation is not supported, default to Cape Town
+        const defaultLocation = { lat: -33.9249, lng: 18.4241 };
+        handleLocationSelect(defaultLocation);
+      }
+    } 
+    else if (modeToggled && previousLocation) {
+      setPosition(previousLocation);
+      setMapCenter([previousLocation.lat, previousLocation.lng]);
+      if (storedWeather) {
+        setWeather(JSON.parse(storedWeather));
+      }
     }
-
-    // Use stored location data or geolocation
-    if (storedLocation) {
-      const location = JSON.parse(storedLocation);
-      setMapCenter([location.lat, location.lng]);
-      setPosition(location);
-      handleLocationSelect(location); // Set weather data for stored location
-    } else if (navigator.geolocation) {
-      showSpinner();
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const userLocation = { lat: latitude, lng: longitude };
-          setMapCenter([latitude, longitude]);
-          setPosition(userLocation);
-          handleLocationSelect(userLocation); // Call to set weather data for this location
-        },
-        (error) => {
-          hideSpinner();
-          Swal.fire({
-            icon: 'error',
-            title: 'Location Error',
-            text: `Unable to get your current location: ${error.message}. Defaulting to Cape Town.`,
-            ...getSwalStyling(),
-          });
-
-          // If geolocation fails, default to Cape Town
-          const defaultLocation = { lat: -33.9249, lng: 18.4241 }; // Cape Town coordinates
-          setMapCenter([defaultLocation.lat, defaultLocation.lng]);
-          setPosition(defaultLocation);
-          handleLocationSelect(defaultLocation); // Call to set weather data for Cape Town
-        }
-      );
-    } else {
-      // If geolocation is not supported, default to Cape Town
-      const defaultLocation = { lat: -33.9249, lng: 18.4241 };
-      setMapCenter([defaultLocation.lat, defaultLocation.lng]);
-      setPosition(defaultLocation);
-      handleLocationSelect(defaultLocation); // Call to set weather data for Cape Town
-    }
-  }, [handleLocationSelect, getSwalStyling]);
+  }, [handleLocationSelect, getSwalStyling, modeToggled, previousLocation]);
 
   const handleSearch = async (query) => {
     if (!query.trim()) {
@@ -168,6 +168,7 @@ function App() {
     }
 
     showSpinner();
+    setModeToggled(false);
 
     try {
       const geoResponse = await axios.get(
@@ -177,15 +178,7 @@ function App() {
       if (geoResponse.data && geoResponse.data.length > 0) {
         const { lat, lon } = geoResponse.data[0];
         const searchedLocation = { lat, lng: lon };
-        setMapCenter([lat, lon]);
-        setPosition(searchedLocation);
-        localStorage.setItem('selectedLocation', JSON.stringify(searchedLocation));
-
-        const weatherResponse = await axios.get(
-          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}&units=metric`
-        );
-        setWeather(weatherResponse.data);
-        localStorage.setItem('weatherData', JSON.stringify(weatherResponse.data));
+        handleLocationSelect(searchedLocation);
       } else {
         Swal.fire({
           icon: 'warning',
@@ -215,7 +208,9 @@ function App() {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     document.body.classList.toggle('dark-mode', newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
+    
+    setModeToggled(true);
   };
 
   return (
@@ -228,14 +223,19 @@ function App() {
       </div>
 
       <div className="content">
-        <MapContainer center={mapCenter} zoom={13} className="map-container">
+        <MapContainer center={mapCenter} zoom={13} className="map-container"> 
           <MapUpdater center={mapCenter} />
           <TileLayer
             url={darkMode 
               ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
               : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+            attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
           />
-          <MapEvents onMapClick={handleLocationSelect} />
+          <CustomAttribution />
+          <MapEvents onMapClick={(latlng) => {
+            setModeToggled(false);
+            handleLocationSelect(latlng);
+          }} />
           {position && <Marker position={position} icon={darkMode ? darkIcon : lightIcon}><Popup>{weather?.name || 'Selected location'}</Popup></Marker>}
         </MapContainer>
 
