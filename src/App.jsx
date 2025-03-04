@@ -49,6 +49,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
   const map = useMap();
 
   const handleLocate = (e) => {
+    // Strictly prevent event propagation and default behavior
     e.stopPropagation();
     e.preventDefault();
 
@@ -79,7 +80,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
         },
         {
           enableHighAccuracy: true,
-          timeout: 8000,
+          timeout: 5000,
           maximumAge: 0
         }
       );
@@ -137,25 +138,21 @@ const LocateButton = ({ onLocate, darkMode }) => {
         border: `2px solid ${darkMode ? '#FF5D5D' : '#007BFF'}`,
         transition: 'transform 0.1s ease'
       }}
-      onClick={handleLocate}
+      onClick={handleLocate} // Ensure onClick is still attached
       onMouseDown={(e) => {
         e.stopPropagation();
-        e.preventDefault();
         e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onMouseUp={(e) => {
         e.stopPropagation();
-        e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
       }}
       onTouchStart={(e) => {
         e.stopPropagation();
-        e.preventDefault();
         e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onTouchEnd={(e) => {
         e.stopPropagation();
-        e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
