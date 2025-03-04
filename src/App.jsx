@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents, Marker, Popup } from 'react-leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
@@ -28,20 +28,6 @@ const darkIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const MapUpdater = ({ center }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    // Use flyTo instead of setView to prevent unnecessary marker placement
-    map.flyTo(center, 13, { 
-      animate: true,
-      duration: 1 // Quick animation
-    });
-  }, [center, map]);
-  
-  return null;
-};
-
 const MapEvents = ({ onMapClick }) => {
   useMapEvents({
     click: (e) => {
@@ -55,11 +41,9 @@ const LocateButton = ({ onLocate, darkMode }) => {
   const map = useMap();
 
   const handleLocate = (e) => {
-    // Strictly prevent event propagation and default behavior
     e.stopPropagation();
     e.preventDefault();
 
-    // Default Cape Town location
     const defaultLocation = { lat: -33.9249, lng: 18.4241 };
 
     if (navigator.geolocation) {
@@ -68,8 +52,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
           const { latitude, longitude } = pos.coords;
           const userLocation = { lat: latitude, lng: longitude };
 
-          // Use flyTo to center without placing a marker
-          map.flyTo([latitude, longitude], 13);
+          map.setView([latitude, longitude], 13, { animate: true });
           onLocate(userLocation);
         },
         (error) => {
@@ -81,14 +64,13 @@ const LocateButton = ({ onLocate, darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            // Use flyTo to center without placing a marker
-            map.flyTo([defaultLocation.lat, defaultLocation.lng], 13);
+            map.setView([defaultLocation.lat, defaultLocation.lng], 13, { animate: true });
             onLocate(defaultLocation);
           });
         },
         {
           enableHighAccuracy: true,
-          timeout: 15000, // Increased timeout to 15 seconds
+          timeout: 10000,
           maximumAge: 0
         }
       );
@@ -101,8 +83,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        // Use flyTo to center without placing a marker
-        map.flyTo([defaultLocation.lat, defaultLocation.lng], 13);
+        map.setView([defaultLocation.lat, defaultLocation.lng], 13, { animate: true });
         onLocate(defaultLocation);
       });
     }
@@ -150,18 +131,22 @@ const LocateButton = ({ onLocate, darkMode }) => {
       onClick={handleLocate}
       onMouseDown={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onMouseUp={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
       }}
       onTouchStart={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onTouchEnd={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
@@ -171,53 +156,40 @@ const LocateButton = ({ onLocate, darkMode }) => {
 };
 
 function App() {
-  // Default to browser's color scheme if not previously set
-  const getInitialDarkMode = () => {
-    const savedDarkMode = localStorage.getItem('darkMode');
-    if (savedDarkMode !== null) {
-      return savedDarkMode === 'true';
-    }
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  };
-
   const [position, setPosition] = useState(null);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(getInitialDarkMode);
+  const [darkMode, setDarkMode] = useState(false);
   const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]); // Default to Cape Town
   const [modeToggled, setModeToggled] = useState(false);
   const [previousLocation, setPreviousLocation] = useState(null);
-  const [mapZoom, setMapZoom] = useState(13);
+  const [zoomLevel, setZoomLevel] = useState(13); // Default zoom level
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
 
-  // Watch for system theme changes
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleThemeChange = (e) => {
-      // Only change if dark mode hasn't been explicitly set by user
-      if (localStorage.getItem('darkMode') === null) {
-        setDarkMode(e.matches);
-        document.body.classList.toggle('dark-mode', e.matches);
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleThemeChange);
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDarkMode(prefersDarkMode);
+    document.body.classList.toggle('dark-mode', prefersDarkMode);
+    localStorage.setItem('darkMode', prefersDarkMode.toString());
   }, []);
 
   useEffect(() => {
-    // Apply dark mode class and save preference
-    document.body.classList.toggle('dark-mode', darkMode);
-    localStorage.setItem('darkMode', darkMode.toString());
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+
+    if (savedDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
 
     const storedLocation = localStorage.getItem('selectedLocation');
     if (storedLocation) {
       setPreviousLocation(JSON.parse(storedLocation));
     }
-  }, [darkMode]);
+  }, []);
 
   const getSwalStyling = useCallback(() => ({
     background: darkMode ? '#333' : '#f5f5f5',
@@ -352,29 +324,10 @@ function App() {
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
-    
-    // Explicitly remove the browser's default theme preference flag
+    document.body.classList.toggle('dark-mode', newDarkMode);
     localStorage.setItem('darkMode', newDarkMode.toString());
 
     setModeToggled(true);
-  };
-
-  // Handle map zoom changes
-  const MapZoomHandler = () => {
-    const map = useMap();
-    
-    useEffect(() => {
-      const handleZoomEnd = () => {
-        setMapZoom(map.getZoom());
-      };
-
-      map.on('zoomend', handleZoomEnd);
-      return () => {
-        map.off('zoomend', handleZoomEnd);
-      };
-    }, [map]);
-
-    return null;
   };
 
   return (
@@ -389,15 +342,13 @@ function App() {
       <div className="content">
         <MapContainer 
           center={mapCenter} 
-          zoom={mapZoom} 
+          zoom={zoomLevel} 
           className="map-container"
-          whenCreated={(mapInstance) => {
-            // Disable automatic centering after locate
-            mapInstance.on('locationfound', () => false);
+          whenCreated={(map) => {
+            // Update zoom level when the user zooms
+            map.on('zoomend', () => setZoomLevel(map.getZoom()));
           }}
-        > 
-          <MapZoomHandler />
-          <MapUpdater center={mapCenter} />
+        >
           <TileLayer
             url={darkMode 
               ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
