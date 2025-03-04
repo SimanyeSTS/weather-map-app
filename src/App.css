@@ -413,3 +413,7 @@ body, html {
 .locate-button {
   pointer-events: auto !important;
 }
+
+.locate-button-container {
+  pointer-events: none !important;
+}
