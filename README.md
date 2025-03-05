@@ -1,6 +1,6 @@
 # Weather Map Application
 
-This project is a React application that displays weather data for different locations on a map using React Leaflet. Users can interact with the map, select a location, and view relevant weather details fetched from the OpenWeatherMap API.
+This project is a React application that displays weather data for different locations on an interactive map using React Leaflet. Users can explore weather information by clicking on locations, searching for cities, and enjoying a responsive, dark mode-enabled interface.
 
 ## Features
 
@@ -15,10 +15,13 @@ This project is a React application that displays weather data for different loc
   - Wind speed
 - Clean and responsive layout
 - Error handling with user-friendly messages
+- Geolocation support with fallback to default location
 
 ### Bonus Features
 - Search bar to find and center the map on specific cities
-- Dark mode toggle
+- Dark mode toggle with system preference detection
+- Persistent dark mode and location preferences via local storage
+- Smooth map interactions and animations
 - Weather icons from OpenWeatherMap API
 
 ## Tech Stack
@@ -28,7 +31,9 @@ This project is a React application that displays weather data for different loc
 - **React Leaflet**: Map integration
 - **Axios**: API calls
 - **CSS**: Styling
-- **React Router Dom**: For potential future routing
+- **SweetAlert2**: User notifications
+- **Leaflet**: Core mapping library
+- **React Router Dom**: Potential future routing
 
 ## Project Setup
 
@@ -72,21 +77,49 @@ npm run build
 
 The build files will be in the `dist` directory.
 
-## Assumptions Made
+## Assumptions and Design Choices
 
-1. **User Location**: The app attempts to get the user's current location on load to center the map. If permission is denied or unavailable, a default location (Cape Town) is used.
+1. **User Location**
+   - The app attempts to get the user's current location on load
+   - If geolocation is denied or unavailable, defaults to Cape Town
+   - Provides clear error messaging for location services
 
-2. **API Limits**: The application respects the rate limits of the free tier of OpenWeatherMap API.
+2. **Local Storage**
+   - Stores user preferences like dark mode setting
+   - Caches the last selected location and weather data
+   - Enhances user experience by maintaining state between sessions
 
-3. **Modern Browser Support**: The application is designed for modern browsers with support for ES6+ features.
+3. **API Interaction**
+   - Respects the rate limits of the free tier of OpenWeatherMap API
+   - Implements comprehensive error handling for API requests
 
-4. **Mobile Responsiveness**: The layout adapts for mobile devices with the map taking priority and the sidebar appearing below on smaller screens.
+4. **Responsive Design**
+   - Mobile-first approach with adaptive layouts
+   - Map and sidebar adjust based on screen size
+   - Dark mode support with smooth transitions
+
+5. **Browser Compatibility**
+   - Designed for modern browsers with support for ES6+ features
+   - Geolocation and localStorage feature detection
 
 ## Future Improvements
 
-- Add caching of weather data to reduce API calls
-- Implement more detailed forecasts (hourly, 5-day)
-- Add unit switching (Celsius/Fahrenheit)
+- Implement more detailed caching mechanisms
+- Add comprehensive weather forecasts (hourly, multi-day)
+- Implement unit switching (Celsius/Fahrenheit)
 - Add weather radar or precipitation overlay
-- Improve accessibility features
-- Add multiple location bookmarking
+- Enhance accessibility features
+- Implement multiple location bookmarking
+- Add more detailed error logging
+- Optimize performance for larger datasets
+- Implement more advanced geolocation fallback strategies
+- Add comprehensive internationalization support
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Contact
+
+email: `simanyesomdaka@gmail.com`
+LinkedIn: `https://www.linkedin.com/in/simanye-somdaka-6501712b2/`
