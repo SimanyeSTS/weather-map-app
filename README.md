@@ -122,4 +122,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Contact
 
 email: `simanyesomdaka@gmail.com`
+
 LinkedIn: `https://www.linkedin.com/in/simanye-somdaka-6501712b2/`
