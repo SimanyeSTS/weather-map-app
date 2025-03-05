@@ -239,7 +239,7 @@ function App() {
 
   const handleLocationSelect = useCallback(
     async (latlng, preserveZoom = true) => {
-      setClearInput(true); // Clear the input field
+      setClearInput(true);
       const map = mapRef.current;
 
       const currentZoom = preserveZoom && map ? map.getZoom() : zoomLevel;
