@@ -54,15 +54,15 @@ const LocateButton = ({ onLocate, darkMode }) => {
         (pos) => {
           const { latitude, longitude } = pos.coords;
           const userLocation = { lat: latitude, lng: longitude };
-          
+
           map.dragging.disable();
-          
+
           map.flyTo([latitude, longitude], currentZoom, {
             animate: true,
             duration: 0.5,
             easeLinearity: 0.25
           });
-          
+
           setTimeout(() => {
             map.dragging.enable();
           }, 600);
@@ -79,13 +79,13 @@ const LocateButton = ({ onLocate, darkMode }) => {
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
             map.dragging.disable();
-            
+
             map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
               animate: true,
               duration: 0.5,
               easeLinearity: 0.25
             });
-            
+
             setTimeout(() => {
               map.dragging.enable();
             }, 600);
@@ -109,13 +109,13 @@ const LocateButton = ({ onLocate, darkMode }) => {
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
         map.dragging.disable();
-        
+
         map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
           animate: true,
           duration: 0.5,
           easeLinearity: 0.25
         });
-        
+
         setTimeout(() => {
           map.dragging.enable();
         }, 600);
@@ -207,22 +207,20 @@ function App() {
   const hideSpinner = () => setLoading(false);
 
   useEffect(() => {
-    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setDarkMode(prefersDarkMode);
-    document.body.classList.toggle('dark-mode', prefersDarkMode);
-    localStorage.setItem('darkMode', prefersDarkMode.toString());
-  }, []);
+    const savedMode = localStorage.getItem('darkMode');
+    const savedToggle = localStorage.getItem('modeToggled') === 'true';
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(savedDarkMode);
-
-    if (savedDarkMode) {
-      document.body.classList.add('dark-mode');
+    if (savedMode !== null && savedToggle) {
+      setDarkMode(savedMode === 'true');
     } else {
-      document.body.classList.remove('dark-mode');
+      setDarkMode(systemPrefersDark);
     }
 
+    document.body.classList.toggle('dark-mode', darkMode);
+  }, [darkMode]);
+
+  useEffect(() => {
     const storedLocation = localStorage.getItem('selectedLocation');
     if (storedLocation) {
       setPreviousLocation(JSON.parse(storedLocation));
@@ -243,23 +241,23 @@ function App() {
     async (latlng, preserveZoom = true) => {
       setClearInput(true); // Clear the input field
       const map = mapRef.current;
-      
+
       const currentZoom = preserveZoom && map ? map.getZoom() : zoomLevel;
-      
+
       setPosition(latlng);
-      
+
       const currentCenter = map ? map.getCenter() : null;
       const centerChanged = !currentCenter || 
         Math.abs(currentCenter.lat - latlng.lat) > 0.0001 || 
         Math.abs(currentCenter.lng - latlng.lng) > 0.0001;
-      
+
       if (centerChanged) {
         map.flyTo([latlng.lat, latlng.lng], currentZoom, {
           animate: true,
           duration: 0.5
         });
       }
-  
+
       setMapCenter([latlng.lat, latlng.lng]);
       setPreviousLocation(latlng);
       localStorage.setItem('selectedLocation', JSON.stringify(latlng));
@@ -338,7 +336,7 @@ function App() {
     if (metaThemeColor) {
       const lightModeColor = '#f5f5f5';
       const darkModeColor = '#333';
-      
+
       metaThemeColor.setAttribute('content', darkMode ? darkModeColor : lightModeColor);
     }
   }, [darkMode]);
@@ -393,12 +391,12 @@ function App() {
   };
 
   const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    document.body.classList.toggle('dark-mode', newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
-
+    const newMode = !darkMode;
+    setDarkMode(newMode);
     setModeToggled(true);
+    localStorage.setItem('darkMode', newMode.toString());
+    localStorage.setItem('modeToggled', 'true');
+    document.body.classList.toggle('dark-mode', newMode);
   };
 
   return (
@@ -420,15 +418,15 @@ function App() {
             map.on('zoomend', () => setZoomLevel(map.getZoom()));
           }}
         >
-       <TileLayer
-        key={darkMode ? 'dark-tiles' : 'light-tiles'}
-         url={
-         darkMode
-         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-         : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-         }
-         attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
-       />
+          <TileLayer
+            key={darkMode ? 'dark-tiles' : 'light-tiles'}
+            url={
+              darkMode
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            }
+            attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
+          />
           <CustomAttribution />
           <LocateButton 
             onLocate={(location) => {
