@@ -41,7 +41,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
   const map = useMap();
 
   const handleLocate = (e) => {
-    // Prevent default and stop propagation for both mouse and touch events
     if (e && typeof e.preventDefault === 'function') {
       e.preventDefault();
       e.stopPropagation();
@@ -56,7 +55,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
           const { latitude, longitude } = pos.coords;
           const userLocation = { lat: latitude, lng: longitude };
           
-          // Explicitly remove any ongoing map interactions
           map.dragging.disable();
           
           map.flyTo([latitude, longitude], currentZoom, {
@@ -65,7 +63,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
             easeLinearity: 0.25
           });
           
-          // Re-enable dragging after animation
           setTimeout(() => {
             map.dragging.enable();
           }, 600);
@@ -81,7 +78,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            // Explicitly remove any ongoing map interactions
             map.dragging.disable();
             
             map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
@@ -90,7 +86,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
               easeLinearity: 0.25
             });
             
-            // Re-enable dragging after animation
             setTimeout(() => {
               map.dragging.enable();
             }, 600);
@@ -113,7 +108,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        // Explicitly remove any ongoing map interactions
         map.dragging.disable();
         
         map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
@@ -122,7 +116,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
           easeLinearity: 0.25
         });
         
-        // Re-enable dragging after animation
         setTimeout(() => {
           map.dragging.enable();
         }, 600);
@@ -173,7 +166,6 @@ const LocateButton = ({ onLocate, darkMode }) => {
       }}
       onClick={handleLocate}
       onTouchStart={(e) => {
-        // Passive event listener fix
         e.preventDefault();
         handleLocate(e);
       }}
@@ -206,7 +198,7 @@ function App() {
   const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]); // Default to Cape Town
   const [modeToggled, setModeToggled] = useState(false);
   const [previousLocation, setPreviousLocation] = useState(null);
-  const [zoomLevel, setZoomLevel] = useState(13); // Default zoom level
+  const [zoomLevel, setZoomLevel] = useState(13);
   const mapRef = useRef(null);
 
   const showSpinner = () => setLoading(true);
@@ -249,19 +241,16 @@ function App() {
     async (latlng, preserveZoom = true) => {
       const map = mapRef.current;
       
-      // Use the current zoom level or preserve the existing zoom
       const currentZoom = preserveZoom && map ? map.getZoom() : zoomLevel;
       
       setPosition(latlng);
       
-      // Only update map center if not already at the location
       const currentCenter = map ? map.getCenter() : null;
       const centerChanged = !currentCenter || 
         Math.abs(currentCenter.lat - latlng.lat) > 0.0001 || 
         Math.abs(currentCenter.lng - latlng.lng) > 0.0001;
       
       if (centerChanged) {
-        // Use flyTo for smooth transition, maintaining current zoom
         map.flyTo([latlng.lat, latlng.lng], currentZoom, {
           animate: true,
           duration: 0.5
@@ -341,6 +330,16 @@ function App() {
     }
   }, [handleLocationSelect, getSwalStyling, modeToggled, previousLocation]);
 
+  useEffect(() => {
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      const lightModeColor = '#f5f5f5';
+      const darkModeColor = '#333';
+      
+      metaThemeColor.setAttribute('content', darkMode ? darkModeColor : lightModeColor);
+    }
+  }, [darkMode]);
+
   const handleSearch = async (query) => {
     if (!query.trim()) {
       Swal.fire({
@@ -363,7 +362,7 @@ function App() {
       if (geoResponse.data && geoResponse.data.length > 0) {
         const { lat, lon } = geoResponse.data[0];
         const searchedLocation = { lat, lng: lon };
-        handleLocationSelect(searchedLocation, true); // Preserve zoom
+        handleLocationSelect(searchedLocation, true);
       } else {
         Swal.fire({
           icon: 'warning',
@@ -437,7 +436,7 @@ function App() {
           <MapEvents
             onMapClick={(latlng) => {
               setModeToggled(false);
-              handleLocationSelect(latlng, true); // Preserve zoom
+              handleLocationSelect(latlng, true);
             }}
           />
           {position && (

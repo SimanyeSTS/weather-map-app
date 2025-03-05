@@ -50,7 +50,7 @@ cd weather-map
 npm install
 ```
 
-3. Create a `.env` file in the root directory and add your API key:
+3. Create a `.env.local` file in the root directory and add your API key:
 ```
 VITE_OPENWEATHER_API_KEY=your_openweathermap_api_key_here
 ```
