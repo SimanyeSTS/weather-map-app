@@ -417,14 +417,15 @@ function App() {
             map.on('zoomend', () => setZoomLevel(map.getZoom()));
           }}
         >
-          <TileLayer
-            url={
-              darkMode
-                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-            }
-            attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
-          />
+       <TileLayer
+        key={darkMode ? 'dark-tiles' : 'light-tiles'}
+         url={
+         darkMode
+         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+         : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+         }
+         attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
+       />
           <CustomAttribution />
           <LocateButton 
             onLocate={(location) => {
