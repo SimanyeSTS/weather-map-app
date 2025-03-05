@@ -117,6 +117,7 @@ body, html {
   display: flex;
   max-width: 500px;
   width: 100%;
+  position: relative;
 }
 
 .search-input {
@@ -291,6 +292,24 @@ body, html {
   .footer-text, .footer-year {
     font-size: 14px;
   }
+
+   .search-bar {
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    z-index: 1000;
+    border-radius: 0 0 25px 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
 }
 
 .swal2-popup {
@@ -405,4 +424,49 @@ body, html {
 
 .leaflet-control-attribution a:hover {
   text-decoration: underline;
+}
+
+.suggestions-list {
+  list-style-type: none;
+  text-align: center;
+  margin: 0 auto;
+  padding: 0;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 25px 25px;
+  max-height: 200px;
+  overflow-y: auto;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: white;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+.suggestions-list li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.suggestions-list li:hover {
+  background-color: #f1f1f1;
+}
+
+.dark-mode .suggestions-list {
+  background-color: #333;
+  border-color: #555;
+}
+
+.dark-mode .suggestions-list li {
+  color: #f5f5f5;
+}
+
+.dark-mode .suggestions-list li:hover {
+  background-color: #444;
 }
