@@ -50,7 +50,7 @@ const LocateButton = ({ darkMode }) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          map.flyTo([latitude, longitude], map.getZoom()); // Use flyTo for smooth transition
+          map.setView([latitude, longitude], map.getZoom()); // Use setView to maintain zoom
         },
         (error) => {
           Swal.fire({
@@ -61,7 +61,7 @@ const LocateButton = ({ darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            map.flyTo([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Use flyTo for smooth transition
+            map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Maintain zoom
           });
         },
         {
@@ -79,7 +79,7 @@ const LocateButton = ({ darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        map.flyTo([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Use flyTo for smooth transition
+        map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Maintain zoom
       });
     }
   };
@@ -249,7 +249,7 @@ function App() {
           (pos) => {
             const { latitude, longitude } = pos.coords;
             const userLocation = { lat: latitude, lng: longitude };
-            setMapCenter([latitude, longitude]); // Update mapCenter
+            setMapCenter([latitude, longitude]); 
             handleLocationSelect(userLocation);
           },
           (error) => {
@@ -261,21 +261,19 @@ function App() {
               ...getSwalStyling(),
             });
 
-            // If geolocation fails, default to Cape Town
             const defaultLocation = { lat: -33.9249, lng: 18.4241 };
-            setMapCenter([defaultLocation.lat, defaultLocation.lng]); // Update mapCenter
+            setMapCenter([defaultLocation.lat, defaultLocation.lng]); 
             handleLocationSelect(defaultLocation);
           }
         );
       } else {
-        // If geolocation is not supported, default to Cape Town
         const defaultLocation = { lat: -33.9249, lng: 18.4241 };
-        setMapCenter([defaultLocation.lat, defaultLocation.lng]); // Update mapCenter
+        setMapCenter([defaultLocation.lat, defaultLocation.lng]); 
         handleLocationSelect(defaultLocation);
       }
     } else if (modeToggled && previousLocation) {
       setPosition(previousLocation);
-      setMapCenter([previousLocation.lat, previousLocation.lng]); // Update mapCenter
+      setMapCenter([previousLocation.lat, previousLocation.lng]); 
       if (storedWeather) {
         setWeather(JSON.parse(storedWeather));
       }
@@ -355,7 +353,6 @@ function App() {
           zoom={zoomLevel}
           className="map-container"
           whenCreated={(map) => {
-            // Update zoom level when the user zooms
             map.on('zoomend', () => setZoomLevel(map.getZoom()));
           }}
         >
