@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents, Marker, Popup } from 'react-leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
@@ -37,20 +37,40 @@ const MapEvents = ({ onMapClick }) => {
   return null;
 };
 
-const LocateButton = ({ darkMode }) => {
+const LocateButton = ({ onLocate, darkMode }) => {
   const map = useMap();
 
   const handleLocate = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
+    // Prevent default and stop propagation for both mouse and touch events
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     const defaultLocation = { lat: -33.9249, lng: 18.4241 };
+    const currentZoom = map.getZoom();
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          map.setView([latitude, longitude], map.getZoom()); // Use setView to maintain zoom
+          const userLocation = { lat: latitude, lng: longitude };
+          
+          // Explicitly remove any ongoing map interactions
+          map.dragging.disable();
+          
+          map.flyTo([latitude, longitude], currentZoom, {
+            animate: true,
+            duration: 0.5,
+            easeLinearity: 0.25
+          });
+          
+          // Re-enable dragging after animation
+          setTimeout(() => {
+            map.dragging.enable();
+          }, 600);
+
+          onLocate(userLocation);
         },
         (error) => {
           Swal.fire({
@@ -61,13 +81,27 @@ const LocateButton = ({ darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Maintain zoom
+            // Explicitly remove any ongoing map interactions
+            map.dragging.disable();
+            
+            map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
+              animate: true,
+              duration: 0.5,
+              easeLinearity: 0.25
+            });
+            
+            // Re-enable dragging after animation
+            setTimeout(() => {
+              map.dragging.enable();
+            }, 600);
+
+            onLocate(defaultLocation);
           });
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
+          timeout: 5000,
+          maximumAge: 0
         }
       );
     } else {
@@ -79,21 +113,35 @@ const LocateButton = ({ darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Maintain zoom
+        // Explicitly remove any ongoing map interactions
+        map.dragging.disable();
+        
+        map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
+          animate: true,
+          duration: 0.5,
+          easeLinearity: 0.25
+        });
+        
+        // Re-enable dragging after animation
+        setTimeout(() => {
+          map.dragging.enable();
+        }, 600);
+
+        onLocate(defaultLocation);
       });
     }
   };
 
   const locationIcon = (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={darkMode ? '#FF5D5D' : '#007BFF'}
-      strokeWidth="3"
-      strokeLinecap="round"
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke={darkMode ? '#FF5D5D' : '#007BFF'} 
+      strokeWidth="3" 
+      strokeLinecap="round" 
       strokeLinejoin="round"
     >
       <circle cx="12" cy="12" r="10" />
@@ -103,27 +151,32 @@ const LocateButton = ({ darkMode }) => {
   );
 
   return (
-    <div
-      className="locate-button"
+    <div 
+      className="locate-button" 
       style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: '20px',
+        position: 'absolute', 
+        bottom: '20px', 
+        left: '20px', 
         zIndex: 2000,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backgroundColor: 'rgba(255, 255, 255, 0.8)', 
         color: darkMode ? '#FF5D5D' : '#007BFF',
         borderRadius: '50%',
-        width: '50px',
-        height: '50px',
+        width: '50px',  
+        height: '50px', 
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         cursor: 'pointer',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)', 
         border: `2px solid ${darkMode ? '#FF5D5D' : '#007BFF'}`,
-        transition: 'transform 0.1s ease',
+        transition: 'transform 0.1s ease'
       }}
       onClick={handleLocate}
+      onTouchStart={(e) => {
+        // Passive event listener fix
+        e.preventDefault();
+        handleLocate(e);
+      }}
       onMouseDown={(e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -133,11 +186,6 @@ const LocateButton = ({ darkMode }) => {
         e.stopPropagation();
         e.preventDefault();
         e.currentTarget.style.transform = 'scale(1)';
-      }}
-      onTouchStart={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        e.currentTarget.style.transform = 'scale(0.95)';
       }}
       onTouchEnd={(e) => {
         e.stopPropagation();
@@ -159,6 +207,7 @@ function App() {
   const [modeToggled, setModeToggled] = useState(false);
   const [previousLocation, setPreviousLocation] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(13); // Default zoom level
+  const mapRef = useRef(null);
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
@@ -197,14 +246,29 @@ function App() {
   );
 
   const handleLocationSelect = useCallback(
-    async (latlng, preserveZoom = false) => {
+    async (latlng, preserveZoom = true) => {
+      const map = mapRef.current;
+      
+      // Use the current zoom level or preserve the existing zoom
+      const currentZoom = preserveZoom && map ? map.getZoom() : zoomLevel;
+      
       setPosition(latlng);
-
-      // If preserveZoom is false, reset to default zoom
-      const newZoom = preserveZoom ? zoomLevel : 13;
+      
+      // Only update map center if not already at the location
+      const currentCenter = map ? map.getCenter() : null;
+      const centerChanged = !currentCenter || 
+        Math.abs(currentCenter.lat - latlng.lat) > 0.0001 || 
+        Math.abs(currentCenter.lng - latlng.lng) > 0.0001;
+      
+      if (centerChanged) {
+        // Use flyTo for smooth transition, maintaining current zoom
+        map.flyTo([latlng.lat, latlng.lng], currentZoom, {
+          animate: true,
+          duration: 0.5
+        });
+      }
+  
       setMapCenter([latlng.lat, latlng.lng]);
-      setZoomLevel(newZoom);
-
       setPreviousLocation(latlng);
       localStorage.setItem('selectedLocation', JSON.stringify(latlng));
 
@@ -249,7 +313,6 @@ function App() {
           (pos) => {
             const { latitude, longitude } = pos.coords;
             const userLocation = { lat: latitude, lng: longitude };
-            setMapCenter([latitude, longitude]); 
             handleLocationSelect(userLocation);
           },
           (error) => {
@@ -262,18 +325,16 @@ function App() {
             });
 
             const defaultLocation = { lat: -33.9249, lng: 18.4241 };
-            setMapCenter([defaultLocation.lat, defaultLocation.lng]); 
             handleLocationSelect(defaultLocation);
           }
         );
       } else {
         const defaultLocation = { lat: -33.9249, lng: 18.4241 };
-        setMapCenter([defaultLocation.lat, defaultLocation.lng]); 
         handleLocationSelect(defaultLocation);
       }
     } else if (modeToggled && previousLocation) {
       setPosition(previousLocation);
-      setMapCenter([previousLocation.lat, previousLocation.lng]); 
+      setMapCenter([previousLocation.lat, previousLocation.lng]);
       if (storedWeather) {
         setWeather(JSON.parse(storedWeather));
       }
@@ -348,7 +409,7 @@ function App() {
 
       <div className="content">
         <MapContainer
-          key={`${mapCenter[0]}-${mapCenter[1]}`}
+          ref={mapRef}
           center={mapCenter}
           zoom={zoomLevel}
           className="map-container"
@@ -365,9 +426,13 @@ function App() {
             attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
           />
           <CustomAttribution />
-          <div className="locate-button-container">
-            <LocateButton darkMode={darkMode} />
-          </div>
+          <LocateButton 
+            onLocate={(location) => {
+              setModeToggled(false);
+              handleLocationSelect(location);
+            }} 
+            darkMode={darkMode} 
+          />
           <MapEvents
             onMapClick={(latlng) => {
               setModeToggled(false);

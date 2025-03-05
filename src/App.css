@@ -416,3 +416,7 @@ body, html {
 .locate-button-container {
   pointer-events: none !important;
 }
+
+.map-container {
+  transition: opacity 0.3s ease;
+}
