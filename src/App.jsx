@@ -145,6 +145,7 @@ const LocateButton = ({ onLocate, darkMode }) => {
 
   return (
     <div 
+      title="Locate Me"
       className="locate-button" 
       style={{
         position: 'absolute', 
@@ -199,6 +200,7 @@ function App() {
   const [modeToggled, setModeToggled] = useState(false);
   const [previousLocation, setPreviousLocation] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(13);
+  const [clearInput, setClearInput] = useState(false);
   const mapRef = useRef(null);
 
   const showSpinner = () => setLoading(true);
@@ -239,6 +241,7 @@ function App() {
 
   const handleLocationSelect = useCallback(
     async (latlng, preserveZoom = true) => {
+      setClearInput(true); // Clear the input field
       const map = mapRef.current;
       
       const currentZoom = preserveZoom && map ? map.getZoom() : zoomLevel;
@@ -341,6 +344,7 @@ function App() {
   }, [darkMode]);
 
   const handleSearch = async (query) => {
+    setClearInput(false);
     if (!query.trim()) {
       Swal.fire({
         icon: 'warning',
@@ -400,7 +404,7 @@ function App() {
   return (
     <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
       <div className="controls">
-        <SearchBar onSearch={handleSearch} />
+        <SearchBar onSearch={handleSearch} clearInput={clearInput} />
         <button className="dark-mode-toggle" onClick={toggleDarkMode}>
           {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
         </button>
