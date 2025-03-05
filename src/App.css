@@ -35,7 +35,6 @@ body, html {
   flex: 1;
   overflow: hidden;
   position: relative;
-  padding-bottom: 70px;
 }
 
 .map-container {
@@ -355,9 +354,6 @@ body, html {
 }
 
 .footer-container {
-  position: fixed;
-  bottom: 0;
-  left: 0;
   width: 100%;
   z-index: 1000;
   background-color: var(--background-color);

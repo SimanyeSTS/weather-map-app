@@ -16,7 +16,7 @@ const lightIcon = new L.Icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+  shadowSize: [41, 41],
 });
 
 const darkIcon = new L.Icon({
@@ -25,7 +25,7 @@ const darkIcon = new L.Icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+  shadowSize: [41, 41],
 });
 
 const MapEvents = ({ onMapClick }) => {
@@ -50,8 +50,7 @@ const LocateButton = ({ darkMode }) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          // Directly set the view using the current zoom level
-          map.setView([latitude, longitude], map.getZoom());
+          map.flyTo([latitude, longitude], map.getZoom()); // Use flyTo for smooth transition
         },
         (error) => {
           Swal.fire({
@@ -62,14 +61,13 @@ const LocateButton = ({ darkMode }) => {
             background: darkMode ? '#333' : '#f5f5f5',
             color: darkMode ? '#f5f5f5' : '#333',
           }).then(() => {
-            // Directly set the view to default location using current zoom level
-            map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom());
+            map.flyTo([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Use flyTo for smooth transition
           });
         },
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 0
+          maximumAge: 0,
         }
       );
     } else {
@@ -81,22 +79,21 @@ const LocateButton = ({ darkMode }) => {
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
       }).then(() => {
-        // Directly set the view to default location using current zoom level
-        map.setView([defaultLocation.lat, defaultLocation.lng], map.getZoom());
+        map.flyTo([defaultLocation.lat, defaultLocation.lng], map.getZoom()); // Use flyTo for smooth transition
       });
     }
   };
 
   const locationIcon = (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke={darkMode ? '#FF5D5D' : '#007BFF'} 
-      strokeWidth="3" 
-      strokeLinecap="round" 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={darkMode ? '#FF5D5D' : '#007BFF'}
+      strokeWidth="3"
+      strokeLinecap="round"
       strokeLinejoin="round"
     >
       <circle cx="12" cy="12" r="10" />
@@ -106,25 +103,25 @@ const LocateButton = ({ darkMode }) => {
   );
 
   return (
-    <div 
+    <div
       className="locate-button"
       style={{
-        position: 'absolute', 
-        bottom: '20px', 
-        left: '20px', 
+        position: 'absolute',
+        bottom: '20px',
+        left: '20px',
         zIndex: 2000,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
         color: darkMode ? '#FF5D5D' : '#007BFF',
         borderRadius: '50%',
-        width: '50px',  
-        height: '50px', 
+        width: '50px',
+        height: '50px',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         cursor: 'pointer',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.2)', 
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
         border: `2px solid ${darkMode ? '#FF5D5D' : '#007BFF'}`,
-        transition: 'transform 0.1s ease'
+        transition: 'transform 0.1s ease',
       }}
       onClick={handleLocate}
       onMouseDown={(e) => {
@@ -189,50 +186,58 @@ function App() {
     }
   }, []);
 
-  const getSwalStyling = useCallback(() => ({
-    background: darkMode ? '#333' : '#f5f5f5',
-    color: darkMode ? '#f5f5f5' : '#333',
-    confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
-    cancelButtonColor: darkMode ? '#dc3545' : '#ffc107',
-  }), [darkMode]);
+  const getSwalStyling = useCallback(
+    () => ({
+      background: darkMode ? '#333' : '#f5f5f5',
+      color: darkMode ? '#f5f5f5' : '#333',
+      confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
+      cancelButtonColor: darkMode ? '#dc3545' : '#ffc107',
+    }),
+    [darkMode]
+  );
 
-  const handleLocationSelect = useCallback(async (latlng, preserveZoom = false) => {
-    setPosition(latlng);
+  const handleLocationSelect = useCallback(
+    async (latlng, preserveZoom = false) => {
+      setPosition(latlng);
 
-    // If preserveZoom is false, reset to default zoom
-    const newZoom = preserveZoom ? zoomLevel : 13;
-    setMapCenter([latlng.lat, latlng.lng]);
-    setZoomLevel(newZoom);
+      // If preserveZoom is false, reset to default zoom
+      const newZoom = preserveZoom ? zoomLevel : 13;
+      setMapCenter([latlng.lat, latlng.lng]);
+      setZoomLevel(newZoom);
 
-    setPreviousLocation(latlng);
-    localStorage.setItem('selectedLocation', JSON.stringify(latlng));
+      setPreviousLocation(latlng);
+      localStorage.setItem('selectedLocation', JSON.stringify(latlng));
 
-    showSpinner();
+      showSpinner();
 
-    try {
-      const response = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${latlng.lat}&lon=${latlng.lng}&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}&units=metric`
-      );
-      setWeather(response.data);
-      localStorage.setItem('weatherData', JSON.stringify(response.data));
-    } catch (error) {
-      let errorMessage = "An error occurred while fetching weather data.";
-      if (error.response && error.response.status === 404) {
-        errorMessage = "Location not found. Please ensure the coordinates are correct.";
-      } else if (error.message.includes("Network Error")) {
-        errorMessage = "Network error. Please check your internet connection.";
+      try {
+        const response = await axios.get(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${latlng.lat}&lon=${latlng.lng}&appid=${
+            import.meta.env.VITE_OPENWEATHER_API_KEY
+          }&units=metric`
+        );
+        setWeather(response.data);
+        localStorage.setItem('weatherData', JSON.stringify(response.data));
+      } catch (error) {
+        let errorMessage = 'An error occurred while fetching weather data.';
+        if (error.response && error.response.status === 404) {
+          errorMessage = 'Location not found. Please ensure the coordinates are correct.';
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        }
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: errorMessage,
+          ...getSwalStyling(),
+        });
+      } finally {
+        hideSpinner();
       }
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: errorMessage,
-        ...getSwalStyling(),
-      });
-    } finally {
-      hideSpinner();
-    }
-  }, [getSwalStyling, zoomLevel]);
+    },
+    [getSwalStyling, zoomLevel]
+  );
 
   useEffect(() => {
     const storedWeather = localStorage.getItem('weatherData');
@@ -268,8 +273,7 @@ function App() {
         setMapCenter([defaultLocation.lat, defaultLocation.lng]); // Update mapCenter
         handleLocationSelect(defaultLocation);
       }
-    } 
-    else if (modeToggled && previousLocation) {
+    } else if (modeToggled && previousLocation) {
       setPosition(previousLocation);
       setMapCenter([previousLocation.lat, previousLocation.lng]); // Update mapCenter
       if (storedWeather) {
@@ -310,9 +314,9 @@ function App() {
         });
       }
     } catch (error) {
-      let errorMessage = "Error searching for location.";
-      if (error.message.includes("Network Error")) {
-        errorMessage = "Network error. Please check your internet connection.";
+      let errorMessage = 'Error searching for location.';
+      if (error.message.includes('Network Error')) {
+        errorMessage = 'Network error. Please check your internet connection.';
       }
 
       Swal.fire({
@@ -345,10 +349,10 @@ function App() {
       </div>
 
       <div className="content">
-        <MapContainer 
+        <MapContainer
           key={`${mapCenter[0]}-${mapCenter[1]}`}
-          center={mapCenter} 
-          zoom={zoomLevel} 
+          center={mapCenter}
+          zoom={zoomLevel}
           className="map-container"
           whenCreated={(map) => {
             // Update zoom level when the user zooms
@@ -356,22 +360,28 @@ function App() {
           }}
         >
           <TileLayer
-            url={darkMode 
-              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-              : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+            url={
+              darkMode
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            }
             attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
           />
           <CustomAttribution />
           <div className="locate-button-container">
-            <LocateButton 
-              darkMode={darkMode} 
-            />
+            <LocateButton darkMode={darkMode} />
           </div>
-          <MapEvents onMapClick={(latlng) => {
-            setModeToggled(false);
-            handleLocationSelect(latlng, true); // Preserve zoom
-          }} />
-          {position && <Marker position={position} icon={darkMode ? darkIcon : lightIcon}><Popup>{weather?.name || 'Selected location'}</Popup></Marker>}
+          <MapEvents
+            onMapClick={(latlng) => {
+              setModeToggled(false);
+              handleLocationSelect(latlng, true); // Preserve zoom
+            }}
+          />
+          {position && (
+            <Marker position={position} icon={darkMode ? darkIcon : lightIcon}>
+              <Popup>{weather?.name || 'Selected location'}</Popup>
+            </Marker>
+          )}
         </MapContainer>
 
         {weather && <WeatherSidebar weather={weather} loading={loading} />}
