@@ -28,113 +28,165 @@ const darkIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-const MapEvents = ({ onMapClick }) => {
+const MapEvents = ({ onMapClick, disabled }) => {
   useMapEvents({
     click: (e) => {
-      onMapClick(e.latlng);
+      if (!disabled) {
+        onMapClick(e.latlng);
+      }
     },
   });
   return null;
 };
 
-const LocateButton = ({ onLocate, darkMode }) => {
+const LocateButton = ({ onLocate, darkMode, disabled }) => {
   const map = useMap();
+  const buttonRef = useRef(null);
 
-  const handleLocate = (e) => {
-    if (e && typeof e.preventDefault === 'function') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const getGeolocation = async () => {
+    if (disabled) return;
 
     const defaultLocation = { lat: -33.9249, lng: 18.4241 };
     const currentZoom = map.getZoom();
 
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const userLocation = { lat: latitude, lng: longitude };
-          
-          map.dragging.disable();
-          
-          map.flyTo([latitude, longitude], currentZoom, {
-            animate: true,
-            duration: 0.5,
-            easeLinearity: 0.25
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0,
           });
-          
-          setTimeout(() => {
-            map.dragging.enable();
-          }, 600);
+        });
 
-          onLocate(userLocation);
-        },
-        (error) => {
-          Swal.fire({
-            icon: 'warning',
-            title: 'Location Not Found',
-            text: `Unable to retrieve your current location. ${error.message}. Defaulting to Cape Town.`,
-            confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
-            background: darkMode ? '#333' : '#f5f5f5',
-            color: darkMode ? '#f5f5f5' : '#333',
-          }).then(() => {
-            map.dragging.disable();
-            
-            map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
-              animate: true,
-              duration: 0.5,
-              easeLinearity: 0.25
-            });
-            
-            setTimeout(() => {
-              map.dragging.enable();
-            }, 600);
+        const { latitude, longitude } = position.coords;
+        const userLocation = { lat: latitude, lng: longitude };
 
-            onLocate(defaultLocation);
-          });
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
+        map.dragging.disable();
+
+        map.flyTo([latitude, longitude], currentZoom, {
+          animate: true,
+          duration: 0.5,
+          easeLinearity: 0.25,
+        });
+
+        setTimeout(() => {
+          map.dragging.enable();
+        }, 600);
+
+        onLocate(userLocation);
+      } catch (error) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Location Not Found',
+          text: `Unable to retrieve your current location. ${error.message}. Defaulting to Cape Town.`,
+          confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
+          background: darkMode ? '#333' : '#f5f5f5',
+          color: darkMode ? '#f5f5f5' : '#333',
+        });
+
+        map.dragging.disable();
+
+        map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
+          animate: true,
+          duration: 0.5,
+          easeLinearity: 0.25,
+        });
+
+        setTimeout(() => {
+          map.dragging.enable();
+        }, 600);
+
+        onLocate(defaultLocation);
+      }
     } else {
-      Swal.fire({
+      await Swal.fire({
         icon: 'error',
         title: 'Geolocation Not Supported',
         text: 'Your browser does not support geolocation. Defaulting to Cape Town.',
         confirmButtonColor: darkMode ? '#4CA1AF' : '#2C3E50',
         background: darkMode ? '#333' : '#f5f5f5',
         color: darkMode ? '#f5f5f5' : '#333',
-      }).then(() => {
-        map.dragging.disable();
-        
-        map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
-          animate: true,
-          duration: 0.5,
-          easeLinearity: 0.25
-        });
-        
-        setTimeout(() => {
-          map.dragging.enable();
-        }, 600);
-
-        onLocate(defaultLocation);
       });
+
+      map.dragging.disable();
+
+      map.flyTo([defaultLocation.lat, defaultLocation.lng], currentZoom, {
+        animate: true,
+        duration: 0.5,
+        easeLinearity: 0.25,
+      });
+
+      setTimeout(() => {
+        map.dragging.enable();
+      }, 600);
+
+      onLocate(defaultLocation);
     }
   };
 
+  useEffect(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const handleButtonClick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.nativeEvent) {
+        e.nativeEvent.preventDefault();
+        e.nativeEvent.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+      }
+
+      if (!disabled) {
+        getGeolocation();
+      }
+
+      return false;
+    };
+
+    const handleMouseDown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!disabled) {
+        button.style.transform = 'scale(0.95)';
+      }
+      return false;
+    };
+
+    const handleMouseUp = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!disabled) {
+        button.style.transform = 'scale(1)';
+      }
+      return false;
+    };
+
+    button.addEventListener('click', handleButtonClick, { capture: true });
+    button.addEventListener('mousedown', handleMouseDown, { capture: true });
+    button.addEventListener('mouseup', handleMouseUp, { capture: true });
+    button.addEventListener('touchstart', handleButtonClick, { capture: true });
+
+    return () => {
+      button.removeEventListener('click', handleButtonClick, { capture: true });
+      button.removeEventListener('mousedown', handleMouseDown, { capture: true });
+      button.removeEventListener('mouseup', handleMouseUp, { capture: true });
+      button.removeEventListener('touchstart', handleButtonClick, { capture: true });
+    };
+  }, [disabled, darkMode, map]);
+
   const locationIcon = (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke={darkMode ? '#FF5D5D' : '#007BFF'} 
-      strokeWidth="3" 
-      strokeLinecap="round" 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={darkMode ? '#FF5D5D' : '#007BFF'}
+      strokeWidth="3"
+      strokeLinecap="round"
       strokeLinejoin="round"
     >
       <circle cx="12" cy="12" r="10" />
@@ -144,46 +196,30 @@ const LocateButton = ({ onLocate, darkMode }) => {
   );
 
   return (
-    <div 
+    <div
+      ref={buttonRef}
       title="Locate Me"
-      className="locate-button" 
+      className={`locate-button ${disabled ? 'disabled' : ''}`}
       style={{
-        position: 'absolute', 
-        bottom: '20px', 
-        left: '20px', 
-        zIndex: 2000,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+        position: 'absolute',
+        bottom: '20px',
+        left: '20px',
+        zIndex: 10000,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
         color: darkMode ? '#FF5D5D' : '#007BFF',
         borderRadius: '50%',
-        width: '50px',  
-        height: '50px', 
+        width: '50px',
+        height: '50px',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        cursor: 'pointer',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.2)', 
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
         border: `2px solid ${darkMode ? '#FF5D5D' : '#007BFF'}`,
-        transition: 'transform 0.1s ease'
-      }}
-      onClick={handleLocate}
-      onTouchStart={(e) => {
-        e.preventDefault();
-        handleLocate(e);
-      }}
-      onMouseDown={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        e.currentTarget.style.transform = 'scale(0.95)';
-      }}
-      onMouseUp={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        e.currentTarget.style.transform = 'scale(1)';
-      }}
-      onTouchEnd={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        e.currentTarget.style.transform = 'scale(1)';
+        transition: 'transform 0.1s ease',
+        opacity: disabled ? 0.6 : 1,
+        pointerEvents: 'auto',
+        isolation: 'isolate',
       }}
     >
       {locationIcon}
@@ -191,20 +227,109 @@ const LocateButton = ({ onLocate, darkMode }) => {
   );
 };
 
+const MapController = ({ onMapInit }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (map && onMapInit) {
+      onMapInit(map);
+    }
+  }, [map, onMapInit]);
+
+  return null;
+};
+
 function App() {
   const [position, setPosition] = useState(null);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]); // Default to Cape Town
+  const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]);
   const [modeToggled, setModeToggled] = useState(false);
   const [previousLocation, setPreviousLocation] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(13);
   const [clearInput, setClearInput] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const mapRef = useRef(null);
+  const swalActiveRef = useRef(false);
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
+
+  const showAlert = async (options) => {
+    swalActiveRef.current = true;
+    try {
+      await Swal.fire(options);
+    } finally {
+      swalActiveRef.current = false;
+      setHasError(false);
+    }
+  };
+
+  const handleMapInit = useCallback((map) => {
+    mapRef.current = map;
+    map.on('zoomend', () => setZoomLevel(map.getZoom()));
+    
+    map.setMaxBounds([[-90, -Infinity], [90, Infinity]]);
+    
+    map.on('drag', () => {
+      const center = map.getCenter();
+      const wrappedLng = ((center.lng + 180) % 360) - 180;
+      
+      if (center.lng !== wrappedLng) {
+        map.panTo([center.lat, wrappedLng], { animate: false });
+      }
+      
+      const maxLat = 85;
+      const minLat = -85;
+      
+      if (center.lat > maxLat || center.lat < minLat) {
+        const clampedLat = Math.max(minLat, Math.min(maxLat, center.lat));
+        map.panTo([clampedLat, center.lng], { animate: false });
+      }
+    });
+    
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+    const maxLat = 85;
+    const minLat = -85;
+
+    const handleMoveEnd = () => {
+      const { lat, lng } = map.getCenter();
+
+      if (lat > maxLat || lat < minLat) {
+        const clampedLat = Math.max(minLat, Math.min(maxLat, lat));
+        map.setView([clampedLat, lng], map.getZoom(), {
+          animate: true,
+          duration: 0.25,
+        });
+      }
+    };
+
+    const handleDrag = () => {
+      const { lat, lng } = map.getCenter();
+      
+      if (lat > maxLat || lat < minLat) {
+        const clampedLat = Math.max(minLat, Math.min(maxLat, lat));
+        map.panTo([clampedLat, lng], {
+          animate: false
+        });
+      }
+    };
+
+    map.on('moveend', handleMoveEnd);
+    map.on('drag', handleDrag);
+
+    return () => {
+      map.off('moveend', handleMoveEnd);
+      map.off('drag', handleDrag);
+    };
+  }, [mapRef.current]);
 
   useEffect(() => {
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -225,7 +350,23 @@ function App() {
 
     const storedLocation = localStorage.getItem('selectedLocation');
     if (storedLocation) {
-      setPreviousLocation(JSON.parse(storedLocation));
+      try {
+        const parsedLocation = JSON.parse(storedLocation);
+        setPreviousLocation(parsedLocation);
+        setPosition(parsedLocation);
+        setMapCenter([parsedLocation.lat, parsedLocation.lng]);
+      } catch (e) {
+        localStorage.removeItem('selectedLocation');
+      }
+    }
+
+    const storedWeather = localStorage.getItem('weatherData');
+    if (storedWeather) {
+      try {
+        setWeather(JSON.parse(storedWeather));
+      } catch (e) {
+        localStorage.removeItem('weatherData');
+      }
     }
   }, []);
 
@@ -241,48 +382,65 @@ function App() {
 
   const handleLocationSelect = useCallback(
     async (latlng, preserveZoom = true) => {
-      setClearInput(true); // Clear the input field
-      const map = mapRef.current;
-      
-      const currentZoom = preserveZoom && map ? map.getZoom() : zoomLevel;
-      
-      setPosition(latlng);
-      
-      const currentCenter = map ? map.getCenter() : null;
-      const centerChanged = !currentCenter || 
-        Math.abs(currentCenter.lat - latlng.lat) > 0.0001 || 
-        Math.abs(currentCenter.lng - latlng.lng) > 0.0001;
-      
-      if (centerChanged) {
-        map.flyTo([latlng.lat, latlng.lng], currentZoom, {
-          animate: true,
-          duration: 0.5
-        });
+      if (isProcessing || swalActiveRef.current) {
+        return;
       }
-  
-      setMapCenter([latlng.lat, latlng.lng]);
-      setPreviousLocation(latlng);
-      localStorage.setItem('selectedLocation', JSON.stringify(latlng));
+
+      setIsProcessing(true);
+      setClearInput(true);
+      setHasError(false);
+      
+      const map = mapRef.current;
+      if (!map) {
+        setIsProcessing(false);
+        return;
+      }
+
+      setPosition(latlng);
+      setWeather(null);
 
       showSpinner();
 
       try {
-        const response = await axios.get(
+        const apiResponse = await axios.get(
           `https://api.openweathermap.org/data/2.5/weather?lat=${latlng.lat}&lon=${latlng.lng}&appid=${
             import.meta.env.VITE_OPENWEATHER_API_KEY
-          }&units=metric`
+          }&units=metric`, 
+          { timeout: 10000 }
         );
-        setWeather(response.data);
-        localStorage.setItem('weatherData', JSON.stringify(response.data));
+        
+        setWeather(apiResponse.data);
+        localStorage.setItem('weatherData', JSON.stringify(apiResponse.data));
+        localStorage.setItem('selectedLocation', JSON.stringify(latlng));
+        
+        setPreviousLocation(latlng);
+        
+        const currentZoom = preserveZoom ? map.getZoom() : zoomLevel;
+        
+        map.flyTo([latlng.lat, latlng.lng], currentZoom, {
+          animate: true,
+          duration: 0.5,
+        });
+        
       } catch (error) {
-        let errorMessage = 'An error occurred while fetching weather data.';
-        if (error.response && error.response.status === 404) {
-          errorMessage = 'Location not found. Please ensure the coordinates are correct.';
-        } else if (error.message.includes('Network Error')) {
+        setHasError(true);
+        
+        let errorMessage = 'We couldn\'t find that location. Please check the coordinates and try again.';
+        if (error.response) {
+          if (error.response.status === 404) {
+            errorMessage = 'We couldn\'t find that location. Please check the coordinates and try again.';
+          } else if (error.response.status === 429) {
+            errorMessage = 'You\'re making requests too quickly! Please wait a moment and try again.';
+          } else if (error.response.status === 401) {
+            errorMessage = 'We’re having trouble connecting. Please try again later or contact support if the issue continues.';
+          }
+        } else if (error.message.includes('Network Error') || error.code === 'ECONNABORTED') {
           errorMessage = 'Network error. Please check your internet connection.';
         }
 
-        Swal.fire({
+        setWeather(null);
+        
+        await showAlert({
           icon: 'error',
           title: 'Error',
           text: errorMessage,
@@ -290,15 +448,14 @@ function App() {
         });
       } finally {
         hideSpinner();
+        setIsProcessing(false);
       }
     },
-    [getSwalStyling, zoomLevel]
+    [getSwalStyling, zoomLevel, isProcessing]
   );
 
   useEffect(() => {
-    const storedWeather = localStorage.getItem('weatherData');
-
-    if (!previousLocation) {
+    if (!position && !previousLocation) {
       if (navigator.geolocation) {
         showSpinner();
         navigator.geolocation.getCurrentPosition(
@@ -307,9 +464,9 @@ function App() {
             const userLocation = { lat: latitude, lng: longitude };
             handleLocationSelect(userLocation);
           },
-          (error) => {
+          async (error) => {
             hideSpinner();
-            Swal.fire({
+            await showAlert({
               icon: 'error',
               title: 'Location Error',
               text: `Unable to get your current location: ${error.message}. Defaulting to Cape Town.`,
@@ -324,14 +481,8 @@ function App() {
         const defaultLocation = { lat: -33.9249, lng: 18.4241 };
         handleLocationSelect(defaultLocation);
       }
-    } else if (modeToggled && previousLocation) {
-      setPosition(previousLocation);
-      setMapCenter([previousLocation.lat, previousLocation.lng]);
-      if (storedWeather) {
-        setWeather(JSON.parse(storedWeather));
-      }
     }
-  }, [handleLocationSelect, getSwalStyling, modeToggled, previousLocation]);
+  }, [handleLocationSelect, getSwalStyling, previousLocation, position]);
 
   useEffect(() => {
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
@@ -344,9 +495,15 @@ function App() {
   }, [darkMode]);
 
   const handleSearch = async (query) => {
+    if (isProcessing || swalActiveRef.current) {
+      return;
+    }
+    
     setClearInput(false);
+    setHasError(false);
+    
     if (!query.trim()) {
-      Swal.fire({
+      await showAlert({
         icon: 'warning',
         title: 'Input Required',
         text: 'Please enter a city name.',
@@ -355,20 +512,25 @@ function App() {
       return;
     }
 
+    setIsProcessing(true);
     showSpinner();
     setModeToggled(false);
 
     try {
       const geoResponse = await axios.get(
-        `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=1&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`
+        `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=1&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`,
+        { timeout: 10000 }
       );
 
       if (geoResponse.data && geoResponse.data.length > 0) {
         const { lat, lon } = geoResponse.data[0];
         const searchedLocation = { lat, lng: lon };
-        handleLocationSelect(searchedLocation, true);
+        
+        await handleLocationSelect(searchedLocation, true);
       } else {
-        Swal.fire({
+        setHasError(true);
+        
+        await showAlert({
           icon: 'warning',
           title: 'Location Not Found',
           text: 'Location not found. Please try another search.',
@@ -376,12 +538,14 @@ function App() {
         });
       }
     } catch (error) {
+      setHasError(true);
+      
       let errorMessage = 'Error searching for location.';
-      if (error.message.includes('Network Error')) {
+      if (error.message.includes('Network Error') || error.code === 'ECONNABORTED') {
         errorMessage = 'Network error. Please check your internet connection.';
       }
 
-      Swal.fire({
+      await showAlert({
         icon: 'error',
         title: 'Error',
         text: `${errorMessage} Please try again.`,
@@ -389,6 +553,7 @@ function App() {
       });
     } finally {
       hideSpinner();
+      setIsProcessing(false);
     }
   };
 
@@ -404,53 +569,73 @@ function App() {
   return (
     <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
       <div className="controls">
-        <SearchBar onSearch={handleSearch} clearInput={clearInput} />
-        <button className="dark-mode-toggle" onClick={toggleDarkMode}>
+        <SearchBar onSearch={handleSearch} clearInput={clearInput} disabled={isProcessing || swalActiveRef.current} />
+        <button
+          className="dark-mode-toggle"
+          onClick={toggleDarkMode}
+          disabled={isProcessing || swalActiveRef.current}
+        >
           {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
         </button>
       </div>
 
       <div className="content">
-        <MapContainer
-          ref={mapRef}
-          center={mapCenter}
-          zoom={zoomLevel}
-          className="map-container"
-          whenCreated={(map) => {
-            map.on('zoomend', () => setZoomLevel(map.getZoom()));
+      <MapContainer
+        center={mapCenter}
+        zoom={zoomLevel}
+        className="map-container"
+        maxZoom={18}
+        minZoom={2}
+        worldCopyJump={true}
+        maxBoundsViscosity={1.0}
+      >
+        <MapController onMapInit={handleMapInit} />
+        <TileLayer
+          key={darkMode ? 'dark-tiles' : 'light-tiles'}
+          url={
+            darkMode
+              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+              : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+          }
+          attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
+          noWrap={false}
+        />
+        <CustomAttribution />
+        <LocateButton
+          onLocate={(location) => {
+            setModeToggled(false);
+            handleLocationSelect(location);
           }}
-        >
-       <TileLayer
-        key={darkMode ? 'dark-tiles' : 'light-tiles'}
-         url={
-         darkMode
-         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-         : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-         }
-         attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
-       />
-          <CustomAttribution />
-          <LocateButton 
-            onLocate={(location) => {
-              setModeToggled(false);
-              handleLocationSelect(location);
-            }} 
-            darkMode={darkMode} 
-          />
-          <MapEvents
-            onMapClick={(latlng) => {
-              setModeToggled(false);
-              handleLocationSelect(latlng, true);
-            }}
-          />
-          {position && (
-            <Marker position={position} icon={darkMode ? darkIcon : lightIcon}>
-              <Popup>{weather?.name || 'Selected location'}</Popup>
-            </Marker>
-          )}
-        </MapContainer>
+          darkMode={darkMode}
+          disabled={isProcessing || swalActiveRef.current}
+        />
+        <MapEvents
+          onMapClick={(latlng) => {
+            setModeToggled(false);
+            handleLocationSelect(latlng, true);
+          }}
+          disabled={isProcessing || swalActiveRef.current}
+        />
+        {position && (
+          <Marker position={[position.lat, position.lng]} icon={darkMode ? darkIcon : lightIcon}>
+            <Popup>{weather?.name || 'Selected location'}</Popup>
+          </Marker>
+        )}
+      </MapContainer>
 
-        {weather && <WeatherSidebar weather={weather} loading={loading} />}
+        {weather ? (
+          <WeatherSidebar weather={weather} loading={loading} />
+        ) : (
+          <div className="sidebar">
+            <div className="sidebar-header">
+              <h2>Location Unknown</h2>
+            </div>
+            <div className="weather-main">
+              <div className="temperature">N/A</div>
+              <div className="description">No weather data available</div>
+            </div>
+          </div>
+        )}
       </div>
       <Footer />
     </div>

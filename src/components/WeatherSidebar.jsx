@@ -11,12 +11,20 @@ const WeatherSidebar = ({ weather, loading }) => {
     );
   }
 
-  const { main, weather: weatherDetails, wind, name, sys } = weather;
+  const { main, weather: weatherDetails, wind, name, sys, coord } = weather;
+
+  const formatCoordinates = (lat, lon) => {
+    const latDirection = lat >= 0 ? 'N' : 'S';
+    const lonDirection = lon >= 0 ? 'E' : 'W';
+    return `${Math.abs(lat).toFixed(2)}°${latDirection}, ${Math.abs(lon).toFixed(2)}°${lonDirection}`;
+  };
+
+  const locationName = name ? `${name}, ${sys.country}` : formatCoordinates(coord.lat, coord.lon);
 
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h2>{name}, {sys.country}</h2>
+        <h2>{locationName}</h2>
       </div>
       
       <div className="weather-main">
