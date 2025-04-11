@@ -243,7 +243,6 @@ function App() {
   const [position, setPosition] = useState(null);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [mapCenter, setMapCenter] = useState([-33.9249, 18.4241]);
   const [modeToggled, setModeToggled] = useState(false);
   const [previousLocation, setPreviousLocation] = useState(null);
@@ -251,11 +250,90 @@ function App() {
   const [clearInput, setClearInput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [useSystemTheme, setUseSystemTheme] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const mapRef = useRef(null);
   const swalActiveRef = useRef(false);
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
+
+  useEffect(() => {
+    const savedUseSystemTheme = sessionStorage.getItem('useSystemTheme');
+    const shouldUseSystemTheme = savedUseSystemTheme === 'true' || savedUseSystemTheme === null;
+    setUseSystemTheme(shouldUseSystemTheme);
+    
+    const storedDarkMode = localStorage.getItem('darkMode') === 'true';
+    
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (shouldUseSystemTheme) {
+      setDarkMode(systemPrefersDark);
+    } else {
+      setDarkMode(storedDarkMode);
+    }
+
+    if (!sessionStorage.getItem('pageLoaded')) {
+      sessionStorage.setItem('pageLoaded', 'true');
+      sessionStorage.setItem('useSystemTheme', 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+    
+    localStorage.setItem('darkMode', darkMode.toString());
+    
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', darkMode ? '#333' : '#f5f5f5');
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
+    const handleSystemThemeChange = (e) => {
+      if (useSystemTheme) {
+        setDarkMode(e.matches);
+      }
+    };
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, [useSystemTheme]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'r' || e.keyCode === 82)) {
+        sessionStorage.setItem('useSystemTheme', 'true');
+      }
+    };
+    
+    const handleBeforeUnload = (e) => {
+      if (e.ctrlKey && e.shiftKey) {
+        sessionStorage.setItem('useSystemTheme', 'true');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  const toggleDarkMode = () => {
+    setDarkMode(prevDarkMode => !prevDarkMode);
+    setUseSystemTheme(false);
+    sessionStorage.setItem('useSystemTheme', 'false');
+    setModeToggled(true);
+  };
 
   const showAlert = async (options) => {
     swalActiveRef.current = true;
@@ -332,22 +410,6 @@ function App() {
   }, [mapRef.current]);
 
   useEffect(() => {
-    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setDarkMode(prefersDarkMode);
-    document.body.classList.toggle('dark-mode', prefersDarkMode);
-    localStorage.setItem('darkMode', prefersDarkMode.toString());
-  }, []);
-
-  useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(savedDarkMode);
-
-    if (savedDarkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-
     const storedLocation = localStorage.getItem('selectedLocation');
     if (storedLocation) {
       try {
@@ -432,7 +494,7 @@ function App() {
           } else if (error.response.status === 429) {
             errorMessage = 'You\'re making requests too quickly! Please wait a moment and try again.';
           } else if (error.response.status === 401) {
-            errorMessage = 'We’re having trouble connecting. Please try again later or contact support if the issue continues.';
+            errorMessage = 'We\'re having trouble connecting. Please try again later or contact support if the issue continues.';
           }
         } else if (error.message.includes('Network Error') || error.code === 'ECONNABORTED') {
           errorMessage = 'Network error. Please check your internet connection.';
@@ -483,16 +545,6 @@ function App() {
       }
     }
   }, [handleLocationSelect, getSwalStyling, previousLocation, position]);
-
-  useEffect(() => {
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor) {
-      const lightModeColor = '#f5f5f5';
-      const darkModeColor = '#333';
-      
-      metaThemeColor.setAttribute('content', darkMode ? darkModeColor : lightModeColor);
-    }
-  }, [darkMode]);
 
   const handleSearch = async (query) => {
     if (isProcessing || swalActiveRef.current) {
@@ -555,15 +607,6 @@ function App() {
       hideSpinner();
       setIsProcessing(false);
     }
-  };
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    document.body.classList.toggle('dark-mode', newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
-
-    setModeToggled(true);
   };
 
   return (
