@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useReducer, createContext, useContext } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents, Marker, Popup } from 'react-leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
@@ -9,6 +9,34 @@ import SearchBar from './components/SearchBar';
 import WeatherSidebar from './components/WeatherSidebar';
 import Footer from './components/Footer';
 import CustomAttribution from './components/CustomAttribution';
+
+const ThemeContext = createContext();
+
+const themeReducer = (state, action) => {
+  switch (action.type) {
+    case 'TOGGLE_THEME':
+      return { ...state, darkMode: !state.darkMode, useSystemTheme: false };
+    case 'SET_SYSTEM_THEME':
+      return { ...state, darkMode: action.payload, useSystemTheme: true };
+    case 'SET_USER_THEME':
+      return { ...state, darkMode: action.payload, useSystemTheme: false };
+    default:
+      return state;
+  }
+};
+
+const getInitialThemeState = () => {
+  const useSystemTheme = sessionStorage.getItem("useSystemTheme") === "true" || 
+                         sessionStorage.getItem("useSystemTheme") === null;
+  
+  const storedTheme = localStorage.getItem("darkMode") === "true";
+  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  return {
+    darkMode: useSystemTheme ? systemPrefersDark : storedTheme,
+    useSystemTheme
+  };
+};
 
 const lightIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -250,29 +278,16 @@ function App() {
   const [clearInput, setClearInput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [useSystemTheme, setUseSystemTheme] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [themeState, dispatchTheme] = useReducer(themeReducer, null, getInitialThemeState);
   const mapRef = useRef(null);
   const swalActiveRef = useRef(false);
+
+  const { darkMode, useSystemTheme } = themeState;
 
   const showSpinner = () => setLoading(true);
   const hideSpinner = () => setLoading(false);
 
   useEffect(() => {
-    const savedUseSystemTheme = sessionStorage.getItem('useSystemTheme');
-    const shouldUseSystemTheme = savedUseSystemTheme === 'true' || savedUseSystemTheme === null;
-    setUseSystemTheme(shouldUseSystemTheme);
-    
-    const storedDarkMode = localStorage.getItem('darkMode') === 'true';
-    
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (shouldUseSystemTheme) {
-      setDarkMode(systemPrefersDark);
-    } else {
-      setDarkMode(storedDarkMode);
-    }
-
     if (!sessionStorage.getItem('pageLoaded')) {
       sessionStorage.setItem('pageLoaded', 'true');
       sessionStorage.setItem('useSystemTheme', 'true');
@@ -297,7 +312,7 @@ function App() {
   useEffect(() => {
     const handleSystemThemeChange = (e) => {
       if (useSystemTheme) {
-        setDarkMode(e.matches);
+        dispatchTheme({ type: 'SET_SYSTEM_THEME', payload: e.matches });
       }
     };
     
@@ -329,8 +344,7 @@ function App() {
   }, []);
 
   const toggleDarkMode = () => {
-    setDarkMode(prevDarkMode => !prevDarkMode);
-    setUseSystemTheme(false);
+    dispatchTheme({ type: 'TOGGLE_THEME' });
     sessionStorage.setItem('useSystemTheme', 'false');
     setModeToggled(true);
   };
@@ -609,79 +623,88 @@ function App() {
     }
   };
 
+  // Provide theme context value
+  const themeContextValue = {
+    darkMode,
+    useSystemTheme,
+    toggleTheme: toggleDarkMode
+  };
+
   return (
-    <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
-      <div className="controls">
-        <SearchBar onSearch={handleSearch} clearInput={clearInput} disabled={isProcessing || swalActiveRef.current} />
-        <button
-          className="dark-mode-toggle"
-          onClick={toggleDarkMode}
-          disabled={isProcessing || swalActiveRef.current}
+    <ThemeContext.Provider value={themeContextValue}>
+      <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
+        <div className="controls">
+          <SearchBar onSearch={handleSearch} clearInput={clearInput} disabled={isProcessing || swalActiveRef.current} />
+          <button
+            className="dark-mode-toggle"
+            onClick={toggleDarkMode}
+            disabled={isProcessing || swalActiveRef.current}
+          >
+            {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          </button>
+        </div>
+
+        <div className="content">
+        <MapContainer
+          center={mapCenter}
+          zoom={zoomLevel}
+          className="map-container"
+          maxZoom={18}
+          minZoom={2}
+          worldCopyJump={true}
+          maxBoundsViscosity={1.0}
         >
-          {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
-        </button>
-      </div>
+          <MapController onMapInit={handleMapInit} />
+          <TileLayer
+            key={darkMode ? 'dark-tiles' : 'light-tiles'}
+            url={
+              darkMode
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            }
+            attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
+            noWrap={false}
+          />
+          <CustomAttribution />
+          <LocateButton
+            onLocate={(location) => {
+              setModeToggled(false);
+              handleLocationSelect(location);
+            }}
+            darkMode={darkMode}
+            disabled={isProcessing || swalActiveRef.current}
+          />
+          <MapEvents
+            onMapClick={(latlng) => {
+              setModeToggled(false);
+              handleLocationSelect(latlng, true);
+            }}
+            disabled={isProcessing || swalActiveRef.current}
+          />
+          {position && (
+            <Marker position={[position.lat, position.lng]} icon={darkMode ? darkIcon : lightIcon}>
+              <Popup>{weather?.name || 'Selected location'}</Popup>
+            </Marker>
+          )}
+        </MapContainer>
 
-      <div className="content">
-      <MapContainer
-        center={mapCenter}
-        zoom={zoomLevel}
-        className="map-container"
-        maxZoom={18}
-        minZoom={2}
-        worldCopyJump={true}
-        maxBoundsViscosity={1.0}
-      >
-        <MapController onMapInit={handleMapInit} />
-        <TileLayer
-          key={darkMode ? 'dark-tiles' : 'light-tiles'}
-          url={
-            darkMode
-              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-              : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          }
-          attribution='Map data &copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors'
-          noWrap={false}
-        />
-        <CustomAttribution />
-        <LocateButton
-          onLocate={(location) => {
-            setModeToggled(false);
-            handleLocationSelect(location);
-          }}
-          darkMode={darkMode}
-          disabled={isProcessing || swalActiveRef.current}
-        />
-        <MapEvents
-          onMapClick={(latlng) => {
-            setModeToggled(false);
-            handleLocationSelect(latlng, true);
-          }}
-          disabled={isProcessing || swalActiveRef.current}
-        />
-        {position && (
-          <Marker position={[position.lat, position.lng]} icon={darkMode ? darkIcon : lightIcon}>
-            <Popup>{weather?.name || 'Selected location'}</Popup>
-          </Marker>
-        )}
-      </MapContainer>
-
-        {weather ? (
-          <WeatherSidebar weather={weather} loading={loading} />
-        ) : (
-          <div className="sidebar">
-            <div className="sidebar-header">
-              <h2>Location Unknown</h2>
+          {weather ? (
+            <WeatherSidebar weather={weather} loading={loading} />
+          ) : (
+            <div className="sidebar">
+              <div className="sidebar-header">
+                <h2>Location Unknown</h2>
+              </div>
+              <div className="weather-main">
+                <div className="temperature">N/A</div>
+                <div className="description">No weather data available</div>
+              </div>
             </div>
-            <div className="weather-main">
-              <div className="temperature">N/A</div>
-              <div className="description">No weather data available</div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
+        <Footer />
       </div>
-      <Footer />
-    </div>
+    </ThemeContext.Provider>
   );
 }
 
